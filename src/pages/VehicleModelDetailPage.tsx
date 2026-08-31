@@ -1,4 +1,4 @@
-ï»¿import { ArrowLeft, Droplets, Gauge, Sparkles, Wrench } from "lucide-react";
+import { ArrowLeft, Droplets, Gauge, Sparkles, Wrench } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useSupabaseTable } from "../lib/supabase";
 
@@ -55,8 +55,8 @@ const coerceArray = (value: string[] | string | null | undefined): string[] => {
 const normalizeVehicleModel = (model: VehicleModelRow): VehicleModelRow => ({
   ...model,
   id: model.id ?? model.model_name ?? model.name ?? `${model.engine_code ?? "vehicle"}-${model.generation ?? "model"}`,
-  model_name: model.model_name ?? model.name ?? "ModÃ¨le inconnu",
-  generation: model.generation ?? "GÃ©nÃ©ration inconnue",
+  model_name: model.model_name ?? model.name ?? "Modèle inconnu",
+  generation: model.generation ?? "Génération inconnue",
   engine_code: model.engine_code ?? model.engine ?? "N/A",
   compatible_filter_refs: coerceArray(model.compatible_filter_refs),
 });
@@ -79,7 +79,7 @@ const fallbackModels: VehicleModelRow[] = [
     oil_capacity_without_filter: "4.200",
     recommended_interval_km_normal: 10000,
     recommended_interval_km_severe: 5000,
-    oil_change_notes: "Vidange recommandÃ©e tous les 10 000 km en conduite normale.",
+    oil_change_notes: "Vidange recommandée tous les 10 000 km en conduite normale.",
     status: "verified",
   },
   {
@@ -99,7 +99,7 @@ const fallbackModels: VehicleModelRow[] = [
     oil_capacity_without_filter: "4.200",
     recommended_interval_km_normal: 10000,
     recommended_interval_km_severe: 5000,
-    oil_change_notes: "Suivre lâ€™intervalle court en conduite urbaine ou en conditions difficiles.",
+    oil_change_notes: "Suivre l’intervalle court en conduite urbaine ou en conditions difficiles.",
     status: "verified",
   },
   {
@@ -139,7 +139,7 @@ const fallbackModels: VehicleModelRow[] = [
     oil_capacity_without_filter: "6.700",
     recommended_interval_km_normal: 10000,
     recommended_interval_km_severe: 5000,
-    oil_change_notes: "Pour les missions lourdes, raccourcir lâ€™intervalle Ã  5 000 km.",
+    oil_change_notes: "Pour les missions lourdes, raccourcir l’intervalle à 5 000 km.",
     status: "verified",
   },
 ];
@@ -149,7 +149,7 @@ export function VehicleModelDetailPage() {
   const models = useSupabaseTable<VehicleModelRow>("vehicle_models", fallbackModels).map(normalizeVehicleModel);
   const model = models.find((entry) => entry.id === id) ?? fallbackModels.find((entry) => entry.id === id) ?? fallbackModels[0];
 
-  const filters = coerceArray(model.compatible_filter_refs).join(", ") || "Non renseignÃ©";
+  const filters = coerceArray(model.compatible_filter_refs).join(", ") || "Non renseigné";
 
   return (
     <div className="space-y-6">
@@ -158,17 +158,17 @@ export function VehicleModelDetailPage() {
         className="inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-700 hover:text-white"
       >
         <ArrowLeft size={16} />
-        Retour aux modÃ¨les
+        Retour aux modèles
       </Link>
 
       <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.2em] text-amber-400">RÃ©fÃ©rence moteur</p>
+            <p className="text-sm uppercase tracking-[0.2em] text-amber-400">Référence moteur</p>
             <h2 className="mt-2 text-3xl font-bold text-white">
-              {model.model_name ?? "ModÃ¨le inconnu"}
+              {model.model_name ?? "Modèle inconnu"}
             </h2>
-            <p className="mt-2 text-slate-400">{model.generation ?? "GÃ©nÃ©ration inconnue"}</p>
+            <p className="mt-2 text-slate-400">{model.generation ?? "Génération inconnue"}</p>
           </div>
           <span className="inline-flex rounded-full bg-amber-500/15 px-3 py-1 text-xs font-medium uppercase tracking-wide text-amber-300">
             {model.status ?? "verified"}
@@ -185,7 +185,7 @@ export function VehicleModelDetailPage() {
             <p className="mt-2 font-semibold text-white">{model.fuel_type ?? "N/A"}</p>
           </div>
           <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-            <p className="text-sm text-slate-500">PÃ©riode</p>
+            <p className="text-sm text-slate-500">Période</p>
             <p className="mt-2 font-semibold text-white">
               {model.year_start ?? "N/A"} - {model.year_end ?? "N/A"}
             </p>
@@ -193,7 +193,7 @@ export function VehicleModelDetailPage() {
           <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
             <p className="text-sm text-slate-500">Huile</p>
             <p className="mt-2 font-semibold text-white">
-              {model.oil_capacity_liters ?? "N/A"} L Â· {model.recommended_viscosity ?? "N/A"}
+              {model.oil_capacity_liters ?? "N/A"} L · {model.recommended_viscosity ?? "N/A"}
             </p>
           </div>
         </div>
@@ -203,24 +203,24 @@ export function VehicleModelDetailPage() {
         <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
           <div className="mb-4 flex items-center gap-2 text-white">
             <Droplets size={18} className="text-amber-400" />
-            <h3 className="text-lg font-semibold">Recommandation dâ€™huile</h3>
+            <h3 className="text-lg font-semibold">Recommandation d’huile</h3>
           </div>
 
           <div className="space-y-3 text-sm text-slate-300">
             <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
-              <span>SpÃ©cification</span>
-              <span className="font-medium text-white">{model.recommended_spec ?? "Non renseignÃ©e"}</span>
+              <span>Spécification</span>
+              <span className="font-medium text-white">{model.recommended_spec ?? "Non renseignée"}</span>
             </div>
             <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
-              <span>ViscositÃ©</span>
+              <span>Viscosité</span>
               <span className="font-medium text-white">{model.recommended_viscosity ?? "N/A"}</span>
             </div>
             <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
-              <span>CapacitÃ© avec filtre</span>
+              <span>Capacité avec filtre</span>
               <span className="font-medium text-white">{model.oil_capacity_with_filter ?? model.oil_capacity_liters ?? "N/A"} L</span>
             </div>
             <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
-              <span>CapacitÃ© sans filtre</span>
+              <span>Capacité sans filtre</span>
               <span className="font-medium text-white">{model.oil_capacity_without_filter ?? "N/A"} L</span>
             </div>
           </div>
@@ -234,7 +234,7 @@ export function VehicleModelDetailPage() {
 
           <div className="space-y-3 text-sm text-slate-300">
             <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
-              <span>RÃ©fÃ©rence filtre</span>
+              <span>Référence filtre</span>
               <span className="font-medium text-white">{filters}</span>
             </div>
             <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
@@ -242,7 +242,7 @@ export function VehicleModelDetailPage() {
               <span className="font-medium text-white">{model.recommended_interval_km_normal ?? model.recommended_interval_km ?? "N/A"} km</span>
             </div>
             <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
-              <span>Intervalle sÃ©vÃ¨re</span>
+              <span>Intervalle sévère</span>
               <span className="font-medium text-white">{model.recommended_interval_km_severe ?? "N/A"} km</span>
             </div>
             <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
@@ -257,30 +257,26 @@ export function VehicleModelDetailPage() {
         <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
           <div className="mb-4 flex items-center gap-2 text-white">
             <Gauge size={18} className="text-amber-400" />
-            <h3 className="text-lg font-semibold">Conseils dâ€™entretien</h3>
+            <h3 className="text-lg font-semibold">Conseils d’entretien</h3>
           </div>
           <p className="text-sm leading-7 text-slate-300">
-            {model.oil_change_notes ?? "Aucune note spÃ©cifique fournie pour ce modÃ¨le. Suivre les recommandations du constructeur et adapter selon le type dâ€™usage."}
+            {model.oil_change_notes ?? "Aucune note spécifique fournie pour ce modèle. Suivre les recommandations du constructeur et adapter selon le type d’usage."}
           </p>
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
           <div className="mb-4 flex items-center gap-2 text-white">
             <Sparkles size={18} className="text-amber-400" />
-            <h3 className="text-lg font-semibold">Points clÃ©s</h3>
+            <h3 className="text-lg font-semibold">Points clés</h3>
           </div>
 
           <ul className="space-y-3 text-sm text-slate-300">
-            <li>â€¢ VÃ©rifier lâ€™Ã©tat du filtre Ã  huile Ã  chaque vidange.</li>
-            <li>â€¢ ContrÃ´ler rÃ©guliÃ¨rement le niveau dâ€™huile moteur et le bon fonctionnement du systÃ¨me de refroidissement.</li>
-            <li>â€¢ RÃ©duire lâ€™intervalle en conduite urbaine, en charge ou en conditions poussiÃ©reuses.</li>
+            <li>• Vérifier l’état du filtre à huile à chaque vidange.</li>
+            <li>• Contrôler régulièrement le niveau d’huile moteur et le bon fonctionnement du système de refroidissement.</li>
+            <li>• Réduire l’intervalle en conduite urbaine, en charge ou en conditions poussiéreuses.</li>
           </ul>
         </div>
       </div>
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 36b65e1 (Initial commit)

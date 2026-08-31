@@ -1,4 +1,4 @@
-ï»¿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus, Search, Trash2 } from 'lucide-react';
 import {
   defaultVehicleHistoryForm,
@@ -118,7 +118,7 @@ export function VehiclesPage() {
       marque: form.marque.trim(),
       modele: form.modele.trim(),
       dateVidange: form.dateVidange,
-      huileModele: form.huileModele.trim() || 'Huile non prÃ©cisÃ©e',
+      huileModele: form.huileModele.trim() || 'Huile non précisée',
       huileQuantite: Number(form.huileQuantite || 0),
       huileUnite: form.huileUnite,
       filtres: form.filtres,
@@ -147,9 +147,9 @@ export function VehiclesPage() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Recherche plaque, marque, modÃ¨le..."
+            placeholder="Recherche plaque, marque, modèle..."
             className="w-full bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none"
-            aria-label="Recherche vÃ©hicule"
+            aria-label="Recherche véhicule"
           />
         </div>
       </div>
@@ -176,7 +176,7 @@ export function VehiclesPage() {
           <input
             value={form.modele}
             onChange={(e) => setForm({ ...form, modele: e.target.value })}
-            placeholder="ModÃ¨le"
+            placeholder="Modèle"
             className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
           />
           <input
@@ -188,14 +188,14 @@ export function VehiclesPage() {
           <input
             value={form.huileModele}
             onChange={(e) => setForm({ ...form, huileModele: e.target.value })}
-            placeholder="ModÃ¨le d'huile"
+            placeholder="Modèle d'huile"
             className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
           />
           <input
             type="number"
             value={form.huileQuantite}
             onChange={(e) => setForm({ ...form, huileQuantite: e.target.value })}
-            placeholder="QuantitÃ©"
+            placeholder="Quantité"
             className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white"
           />
           <select
@@ -266,7 +266,7 @@ export function VehiclesPage() {
                 <p className="text-xl font-black text-white">{vehicle.marque} {vehicle.modele}</p>
                 <div className="mt-1 flex flex-wrap gap-3 text-sm text-slate-400">
                   <span>Immatriculation: {vehicle.immatriculation}</span>
-                  <span>DerniÃ¨re vidange: {vehicle.lastVisit}</span>
+                  <span>Dernière vidange: {vehicle.lastVisit}</span>
                 </div>
               </div>
               <div className="flex gap-3 text-sm">
@@ -285,7 +285,7 @@ export function VehiclesPage() {
                   <tr>
                     <th className="px-3 py-2">Date</th>
                     <th className="px-3 py-2">Huile</th>
-                    <th className="px-3 py-2">QtÃ©</th>
+                    <th className="px-3 py-2">Qté</th>
                     <th className="px-3 py-2">Filtres</th>
                     <th className="px-3 py-2">Prix total</th>
                     <th className="px-3 py-2">Notes</th>
@@ -300,9 +300,9 @@ export function VehiclesPage() {
                       <td className="px-3 py-2">
                         {entry.huileQuantite} {entry.huileUnite}
                       </td>
-                      <td className="px-3 py-2">{entry.filtres.length ? entry.filtres.join(', ') : 'â€”'}</td>
+                      <td className="px-3 py-2">{entry.filtres.length ? entry.filtres.join(', ') : '—'}</td>
                       <td className="px-3 py-2 text-amber-300">{formatCurrency(entry.prixTotal)}</td>
-                      <td className="px-3 py-2 text-slate-400">{entry.notes || 'â€”'}</td>
+                      <td className="px-3 py-2 text-slate-400">{entry.notes || '—'}</td>
                       <td className="px-3 py-2">
                         <button
                           type="button"
@@ -322,8 +322,4 @@ export function VehiclesPage() {
       </div>
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 36b65e1 (Initial commit)
