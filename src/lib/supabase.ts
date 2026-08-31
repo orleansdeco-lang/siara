@@ -1,8 +1,12 @@
 ﻿import { useEffect, useState } from "react";
 import axios from "axios";
 
+<<<<<<< HEAD
 const supabaseUrl =
   process.env.REACT_APP_SUPABASE_URL ?? "https://tslxdwiliddwkexjvspo.supabase.co";
+=======
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL ?? "https://tslxdwiliddwkexjvspo.supabase.co";
+>>>>>>> 36b65e1 (Initial commit)
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY ?? "";
 
 export type SupabaseTableName =
@@ -40,6 +44,7 @@ export const supabaseClient = axios.create({
 });
 
 export function buildSupabaseQuery(table: string, select = "*", filters: string[] = [], order?: string) {
+<<<<<<< HEAD
   const query = new URLSearchParams();
   query.set("select", select);
 
@@ -53,6 +58,21 @@ export function buildSupabaseQuery(table: string, select = "*", filters: string[
 
   const params = query.toString();
   return params ? `/${table}?${params}` : `/${table}`;
+=======
+  const queryParts = [`select=${encodeURIComponent(select)}`];
+
+  filters.forEach((filter) => {
+    if (filter && filter.trim()) {
+      queryParts.push(filter.trim());
+    }
+  });
+
+  if (order) {
+    queryParts.push(`order=${encodeURIComponent(order)}`);
+  }
+
+  return `/${table}?${queryParts.join("&")}`;
+>>>>>>> 36b65e1 (Initial commit)
 }
 
 export async function fetchSupabaseTable<T>(table: SupabaseTableName | string, select = "*", filters: string[] = [], order?: string): Promise<T[]> {
@@ -66,6 +86,19 @@ export async function fetchSupabaseTable<T>(table: SupabaseTableName | string, s
   }
 }
 
+<<<<<<< HEAD
+=======
+export async function insertSupabaseRow<T>(table: SupabaseTableName | string, payload: T) {
+  try {
+    const { data, status } = await supabaseClient.post(`/${table}`, payload);
+    return { data, status };
+  } catch (error) {
+    console.warn(`Insert into ${table} failed.`, error);
+    return null;
+  }
+}
+
+>>>>>>> 36b65e1 (Initial commit)
 export function useSupabaseTable<T>(table: SupabaseTableName | string, fallback: T[], select = "*", filters: string[] = [], order?: string) {
   const [data, setData] = useState<T[]>(fallback);
 
@@ -84,4 +117,8 @@ export function useSupabaseTable<T>(table: SupabaseTableName | string, fallback:
   }, [fallback, filters, order, select, table]);
 
   return data;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 36b65e1 (Initial commit)

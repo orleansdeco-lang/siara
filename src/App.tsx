@@ -4,6 +4,10 @@ import { Layout } from './components/Layout';
 import { Sidebar } from './components/Sidebar';
 import { useUiStore } from './store/store';
 import { ClientsPage } from './pages/ClientsPage';
+<<<<<<< HEAD
+=======
+import { CustomerFeedbackPage } from './pages/CustomerFeedbackPage';
+>>>>>>> 36b65e1 (Initial commit)
 import { FinancePage } from './pages/FinancePage';
 import { InventoryPage } from './pages/InventoryPage';
 import { OverviewPage } from './pages/OverviewPage';
@@ -40,6 +44,10 @@ function App() {
             <Route path="/finance" element={<FinancePage />} />
             <Route path="/team" element={<TeamPage />} />
             <Route path="/reviews" element={<ReviewsPage />} />
+<<<<<<< HEAD
+=======
+            <Route path="/feedback/:serviceId" element={<CustomerFeedbackPage />} />
+>>>>>>> 36b65e1 (Initial commit)
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </Layout>

@@ -279,4 +279,8 @@ export function VehicleModelDetailPage() {
       </div>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 36b65e1 (Initial commit)

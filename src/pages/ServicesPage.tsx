@@ -118,6 +118,23 @@ const productPricing = {
   cabinFilter: 1800,
 };
 
+<<<<<<< HEAD
+=======
+const SERVICE_STORAGE_KEY = 'siara_service_labels_v1';
+
+type ServiceTicket = {
+  id: string;
+  customerName: string;
+  phone: string;
+  plate: string;
+  vehicle: string;
+  date: string;
+  serviceType: string;
+  amount: number;
+  notes: string;
+};
+
+>>>>>>> 36b65e1 (Initial commit)
 function formatPrice(value: number) {
   return `DA ${new Intl.NumberFormat('fr-DZ').format(value)}`;
 }
@@ -151,6 +168,10 @@ export function ServicesPage() {
   });
   const [laborCost, setLaborCost] = useState('300');
   const [successMessage, setSuccessMessage] = useState('');
+<<<<<<< HEAD
+=======
+  const [serviceTicket, setServiceTicket] = useState<ServiceTicket | null>(null);
+>>>>>>> 36b65e1 (Initial commit)
 
   useEffect(() => {
     const raw = searchQuery.trim();
@@ -257,11 +278,46 @@ export function ServicesPage() {
       return;
     }
 
+<<<<<<< HEAD
+=======
+    const ticket: ServiceTicket = {
+      id: `svc-${Date.now()}`,
+      customerName: customerName.trim() || selectedCustomer?.name || 'Client',
+      phone: customerPhone.trim() || selectedCustomer?.phone || '—',
+      plate: customerPlate.trim() || selectedCustomer?.plate || '—',
+      vehicle: vehicleModel.trim() || selectedCustomer?.model || 'Véhicule',
+      date: new Date().toISOString(),
+      serviceType: isArabic ? 'تغيير زيت وفلاتر' : 'Vidange + filtres',
+      amount: subtotal,
+      notes: `${selectedOil} • ${Object.entries(enabledFilters)
+        .filter(([, enabled]) => enabled)
+        .map(([key]) => key)
+        .join(', ') || 'Aucun filtre'}`,
+    };
+
+    setServiceTicket(ticket);
+
+    try {
+      const raw = window.localStorage.getItem(SERVICE_STORAGE_KEY);
+      const existing = raw ? (JSON.parse(raw) as ServiceTicket[]) : [];
+      window.localStorage.setItem(SERVICE_STORAGE_KEY, JSON.stringify([ticket, ...existing]));
+    } catch {
+      // ignore storage errors in browser-only mode
+    }
+
+>>>>>>> 36b65e1 (Initial commit)
     setSuccessMessage(
       isArabic ? 'تم تسجيل الخدمة بنجاح.' : 'Service enregistré avec succès.',
     );
   };
 
+<<<<<<< HEAD
+=======
+  const ticketQrUrl = serviceTicket
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`${window.location.origin}/feedback/${serviceTicket.id}`)}`
+    : '';
+
+>>>>>>> 36b65e1 (Initial commit)
   const translation = {
     title: isArabic ? 'إضافة خدمة' : 'Ajouter une service',
     searchPlaceholder: isArabic ? 'رقم الهاتف أو رقم اللوحة' : 'Téléphone ou immatriculation',
@@ -281,9 +337,25 @@ export function ServicesPage() {
   };
 
   return (
+<<<<<<< HEAD
     <div className="min-h-[calc(100vh-130px)] min-[1024px]:overflow-hidden">
       <div className="mx-auto max-w-7xl space-y-4 p-3 min-[1024px]:p-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 shadow-2xl shadow-slate-950/50">
+=======
+    <>
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          .print-ticket, .print-ticket * { visibility: visible; }
+          .print-ticket { position: absolute; left: 0; top: 0; width: 100%; }
+          .no-print { display: none !important; }
+        }
+      `}</style>
+
+      <div className="min-h-[calc(100vh-130px)] min-[1024px]:overflow-hidden">
+        <div className="mx-auto max-w-7xl space-y-4 p-3 min-[1024px]:p-4">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 shadow-2xl shadow-slate-950/50">
+>>>>>>> 36b65e1 (Initial commit)
           <div className="mb-3 flex items-center gap-2 text-amber-400">
             <Search size={18} />
             <span className="text-xs font-semibold uppercase tracking-[0.25em]">{translation.title}</span>
@@ -537,20 +609,90 @@ export function ServicesPage() {
             <button
               type="button"
               onClick={handleValidate}
+<<<<<<< HEAD
               className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 px-3 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-amber-500/20 transition hover:opacity-95"
+=======
+              className="no-print w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 px-3 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-amber-500/20 transition hover:opacity-95"
+>>>>>>> 36b65e1 (Initial commit)
             >
               {translation.validate}
             </button>
 
             {successMessage && (
+<<<<<<< HEAD
               <div className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+=======
+              <div className="no-print flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+>>>>>>> 36b65e1 (Initial commit)
                 <CheckCircle2 size={16} />
                 {successMessage}
               </div>
             )}
+<<<<<<< HEAD
+=======
+
+            {serviceTicket && (
+              <div className="print-ticket mt-4 rounded-2xl border border-amber-500/50 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 text-slate-200">
+                <div className="mb-3 flex items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.25em] text-amber-300">Bon d’entretien</p>
+                    <h3 className="mt-1 text-lg font-black text-white">SIARA Workshop</h3>
+                  </div>
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-amber-300">
+                    {serviceTicket.id}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-[1.2fr_0.8fr]">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between gap-4"><span className="text-slate-400">Client</span><span className="font-medium text-white">{serviceTicket.customerName}</span></div>
+                    <div className="flex justify-between gap-4"><span className="text-slate-400">Téléphone</span><span className="font-medium text-white">{serviceTicket.phone}</span></div>
+                    <div className="flex justify-between gap-4"><span className="text-slate-400">Immatriculation</span><span className="font-medium text-white">{serviceTicket.plate}</span></div>
+                    <div className="flex justify-between gap-4"><span className="text-slate-400">Véhicule</span><span className="font-medium text-white">{serviceTicket.vehicle}</span></div>
+                    <div className="flex justify-between gap-4"><span className="text-slate-400">Date</span><span className="font-medium text-white">{new Date(serviceTicket.date).toLocaleDateString('fr-DZ')}</span></div>
+                    <div className="flex justify-between gap-4"><span className="text-slate-400">Service</span><span className="font-medium text-white">{serviceTicket.serviceType}</span></div>
+                    <div className="flex justify-between gap-4"><span className="text-slate-400">Total</span><span className="font-medium text-amber-300">{formatPrice(serviceTicket.amount)}</span></div>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-center">
+                    <img src={ticketQrUrl} alt="QR code service" className="h-28 w-28 rounded-lg border border-slate-700 bg-white p-1" />
+                    <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-slate-400">Avis client</p>
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-xs text-slate-300">
+                  {serviceTicket.notes}
+                </div>
+
+                <div className="no-print mt-4 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="flex-1 rounded-xl border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-300"
+                  >
+                    Imprimer bon
+                  </button>
+                  <a
+                    href={`/feedback/${serviceTicket.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 px-3 py-2 text-center text-sm font-semibold text-slate-950"
+                  >
+                    Ouvrir avis client
+                  </a>
+                </div>
+              </div>
+            )}
+>>>>>>> 36b65e1 (Initial commit)
           </div>
         </div>
       </div>
     </div>
+<<<<<<< HEAD
   );
 }
+=======
+    </>
+  );
+}
+>>>>>>> 36b65e1 (Initial commit)
