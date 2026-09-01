@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Car, ChevronRight, Droplets, Gauge, Info, Plus, Search, Trash2 } from 'lucide-react';
+import { Car, ChevronRight, Droplets, Info, Plus, Search, Trash2 } from 'lucide-react';
 import {
   defaultVehicleHistoryForm,
   VEHICLE_HISTORY_STORAGE_KEY,
@@ -166,7 +166,6 @@ export function VehiclesPage() {
   const formatCurrency = (value: number) => `DA ${new Intl.NumberFormat('fr-DZ').format(value)}`;
 
   const cardSurface = isDark ? 'border-slate-800 bg-slate-900/90' : 'border-slate-200 bg-white shadow-sm';
-  const subCard = isDark ? 'border-slate-800 bg-slate-950/70' : 'border-slate-200 bg-slate-50';
   const baseText = isDark ? 'text-white' : 'text-slate-900';
   const inputClass = isDark
     ? 'border-slate-700 bg-slate-950 text-white placeholder:text-slate-500 focus:border-amber-500'

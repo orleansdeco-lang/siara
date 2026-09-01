@@ -5,14 +5,10 @@ import {
   CircleDollarSign,
   CreditCard,
   Droplets,
-  FileWarning,
   Filter,
-  PiggyBank,
   TrendingDown,
-  TrendingUp,
   Wallet,
 } from 'lucide-react';
-import { useSupabaseTable } from '../lib/supabase';
 import { useUiStore } from '../store/store';
 
 type DetailRow = {
@@ -103,7 +99,6 @@ export function FinancePage() {
   );
 
   const cardSurface = isDark ? 'border-slate-800 bg-slate-900/90' : 'border-slate-200 bg-white shadow-sm';
-  const subCard = isDark ? 'border-slate-800 bg-slate-950/70' : 'border-slate-200 bg-slate-50';
   const baseText = isDark ? 'text-white' : 'text-slate-900';
 
   return (

@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  CarFront,
   CheckCircle2,
   CircleDollarSign,
-  Droplets,
   Fuel,
   Printer,
   QrCode,
@@ -11,7 +9,7 @@ import {
   UserPlus,
   Wrench,
 } from 'lucide-react';
-import { insertSupabaseRow, useSupabaseTable } from '../lib/supabase';
+import { insertSupabaseRow } from '../lib/supabase';
 import { useGarageStore, useUiStore } from '../store/store';
 
 export type CustomerRecord = {

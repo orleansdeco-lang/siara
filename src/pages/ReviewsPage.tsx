@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { MessageSquare, QrCode, Star, ThumbsUp } from 'lucide-react';
+import { QrCode, Star } from 'lucide-react';
 import { fetchSupabaseTable } from '../lib/supabase';
-import { useGarageStore, useUiStore } from '../store/store';
+import { useUiStore } from '../store/store';
 
 export type ReviewRow = {
   id?: string | number;
@@ -48,7 +48,6 @@ const REVIEW_STORAGE_KEY = 'siara_customer_reviews_v1';
 
 export function ReviewsPage() {
   const { language, theme } = useUiStore();
-  const { name: garageName } = useGarageStore();
   const isDark = theme === 'dark';
   const isArabic = language === 'ar';
 

@@ -10,9 +10,8 @@ import {
   ShieldAlert,
   Sparkles,
   Sun,
-  XCircle,
 } from 'lucide-react';
-import { checkSupabaseConnection, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
+import { checkSupabaseConnection, supabaseUrl } from '../lib/supabase';
 import { useGarageStore, useUiStore } from '../store/store';
 
 export function SettingsPage() {

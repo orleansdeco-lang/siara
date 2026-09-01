@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Barcode, Boxes, PackagePlus, Plus, Search, ShieldAlert, TrendingUp, Wallet } from 'lucide-react';
+import { Barcode, Boxes, PackagePlus, Search, ShieldAlert, TrendingUp, Wallet } from 'lucide-react';
 import { fetchSupabaseTable, insertSupabaseRow, updateSupabaseRow } from '../lib/supabase';
 import { useUiStore } from '../store/store';
 

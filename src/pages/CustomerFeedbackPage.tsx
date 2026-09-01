@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CheckCircle2, HeartHandshake, Languages, Sparkles, Star } from 'lucide-react';
-import { fetchSupabaseTable, insertSupabaseRow } from '../lib/supabase';
+import { CheckCircle2, Languages } from 'lucide-react';
+import { insertSupabaseRow } from '../lib/supabase';
 
 const SERVICE_KEY = 'siara_service_labels_v1';
 const REVIEW_KEY = 'siara_customer_reviews_v1';

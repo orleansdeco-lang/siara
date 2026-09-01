@@ -1,28 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  AlertTriangle,
   ArrowRight,
   Bot,
-  CalendarRange,
   CarFront,
   CircleDollarSign,
   ClipboardList,
   CreditCard,
   Droplets,
-  FileWarning,
   MessageSquareText,
-  PackageSearch,
   ReceiptText,
   Search,
-  ShieldAlert,
   ShoppingCart,
-  Sparkles,
   Star,
   TrendingDown,
   TrendingUp,
   Wallet,
-  Wrench,
 } from 'lucide-react';
 import {
   Area,

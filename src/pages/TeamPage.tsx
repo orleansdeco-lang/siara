@@ -1,19 +1,10 @@
 import { useMemo, useState } from 'react';
 import {
-  Award,
   CalendarCheck2,
-  CircleDollarSign,
   ClipboardList,
   Edit,
-  PencilLine,
-  Plus,
   Save,
-  TrendingUp,
-  UserCheck,
-  Users,
-  WalletCards,
 } from 'lucide-react';
-import { useSupabaseTable } from '../lib/supabase';
 import { useUiStore } from '../store/store';
 
 export type Employee = {
