@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Database, Languages, Moon, Plus, Sun } from 'lucide-react';
+import { Database, Menu, Plus } from 'lucide-react';
 import { useGarageStore, useSidebarStore, useUiStore } from '../store/store';
 
 interface LayoutProps {
@@ -8,8 +8,8 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { isExpanded } = useSidebarStore();
-  const { theme, language, toggleTheme, setLanguage } = useUiStore();
+  const { isExpanded, toggleSidebar } = useSidebarStore();
+  const { theme, language } = useUiStore();
   const { name: garageName } = useGarageStore();
 
   const isDark = theme === 'dark';
@@ -27,6 +27,14 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className={`min-h-screen transition-colors duration-200 ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'}`}>
+      {isExpanded && (
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          aria-label={isArabic ? 'إغلاق القائمة' : 'Fermer le menu'}
+          className="fixed inset-0 z-30 bg-slate-950/60 md:hidden"
+        />
+      )}
       <div className={`transition-all duration-300 ${marginClass}`}>
         <header
           className={`sticky top-0 z-30 border-b backdrop-blur-md transition-colors duration-200 ${
@@ -34,7 +42,17 @@ export function Layout({ children }: LayoutProps) {
           }`}
         >
           <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-6 sm:py-3.5">
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border md:hidden ${
+                  isDark ? 'border-slate-800 bg-slate-900 text-amber-400' : 'border-slate-200 bg-white text-amber-600'
+                }`}
+                aria-label={isArabic ? 'فتح القائمة' : 'Ouvrir le menu'}
+              >
+                <Menu size={19} />
+              </button>
               <div
                 className={`hidden h-10 w-10 items-center justify-center rounded-xl border sm:flex ${
                   isDark ? 'border-slate-800 bg-slate-900 text-amber-400' : 'border-slate-200 bg-slate-50 text-amber-600'
@@ -53,36 +71,6 @@ export function Layout({ children }: LayoutProps) {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Language Switcher */}
-              <button
-                type="button"
-                onClick={() => setLanguage(language === 'fr' ? 'ar' : 'fr')}
-                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
-                  isDark
-                    ? 'border-slate-800 bg-slate-900 text-slate-200 hover:border-slate-700 hover:bg-slate-800'
-                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-                }`}
-                title={isArabic ? 'Changer la langue en Français' : 'تغيير اللغة إلى العربية'}
-              >
-                <Languages size={15} className="text-amber-400" />
-                <span className="hidden sm:inline">{language === 'fr' ? 'العربية' : 'Français'}</span>
-              </button>
-
-              {/* Theme Switcher */}
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className={`rounded-xl border p-2 transition ${
-                  isDark
-                    ? 'border-slate-800 bg-slate-900 text-amber-300 hover:border-slate-700 hover:bg-slate-800'
-                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-                }`}
-                aria-label="Toggle theme"
-              >
-                {isDark ? <Sun size={17} /> : <Moon size={17} />}
-              </button>
-
-              {/* New Service Fast Action */}
               <Link
                 to="/services/new"
                 className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 px-3.5 py-2 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 transition hover:brightness-105 active:scale-95 sm:text-sm"
