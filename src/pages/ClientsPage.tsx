@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, Phone, Search, UserPlus } from 'lucide-react';
+import { CalendarClock, Phone, Plus, Search, UserPlus } from 'lucide-react';
 import { fetchSupabaseTable, insertSupabaseRow } from '../lib/supabase';
 import { useUiStore } from '../store/store';
 
