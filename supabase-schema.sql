@@ -327,6 +327,69 @@ insert into garages (id, name, address, phone, email, currency)
 values (1, 'SIARA Workshop Alger', 'Bir Mourad Raïs, Alger', '+213 555 12 34 56', 'contact@siara-workshop.dz', 'DZD')
 on conflict (id) do nothing;
 
+-- ==============================================================================
+-- AUTHENTICATED ACCOUNTS AND STRICT PER-GARAGE ISOLATION
+-- Run this section after enabling Supabase Auth.
+-- ==============================================================================
+
+create table if not exists public.garage_members (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  garage_id bigint not null references public.garages(id) on delete cascade,
+  role text not null default 'owner',
+  created_at timestamptz not null default now(),
+  primary key (user_id, garage_id)
+);
+
+alter table public.garages add column if not exists owner_id uuid references auth.users(id) on delete set null;
+alter table public.garages add column if not exists wilaya text;
+alter table public.garages add column if not exists storefront_image_url text;
+alter table public.garages add column if not exists owner_name text;
+alter table public.garages add column if not exists owner_phone text;
+
+create index if not exists garage_members_garage_id_idx on public.garage_members(garage_id);
+
+create or replace function public.my_garage_ids()
+returns setof bigint
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select garage_id from public.garage_members where user_id = auth.uid();
+$$;
+
+alter table public.garage_members enable row level security;
+drop policy if exists "Members can view their memberships" on public.garage_members;
+create policy "Members can view their memberships" on public.garage_members
+  for select to authenticated using (user_id = auth.uid());
+drop policy if exists "Members can create their membership" on public.garage_members;
+create policy "Members can create their membership" on public.garage_members
+  for insert to authenticated with check (user_id = auth.uid());
+
+do $$
+declare
+  table_name text;
+begin
+  foreach table_name in array array[
+    'garages', 'users', 'clients', 'vehicles', 'vehicle_models',
+    'inventory', 'services', 'transactions', 'reviews',
+    'appointments', 'bays', 'daily_stats', 'notifications'
+  ] loop
+    execute format('drop policy if exists "Enable access for all users" on public.%I', table_name);
+    execute format('drop policy if exists "Account members can access garage data" on public.%I', table_name);
+    execute format(
+      'create policy "Account members can access garage data" on public.%I for all to authenticated using (garage_id in (select public.my_garage_ids())) with check (garage_id in (select public.my_garage_ids()))',
+      table_name
+    );
+  end loop;
+end $$;
+
+drop policy if exists "Account members can access service items" on public.service_items;
+create policy "Account members can access service items" on public.service_items
+  for all to authenticated
+  using (service_id in (select id from public.services where garage_id in (select public.my_garage_ids())))
+  with check (service_id in (select id from public.services where garage_id in (select public.my_garage_ids())));
+
 insert into users (id, garage_id, full_name, role, phone, commission_rate, days_present, started_at)
 values
   (1, 1, 'عبد المالك', 'مسير / Chef d’atelier', '+213 550 11 22 33', 7.5, 24, '2023-02-15'),
