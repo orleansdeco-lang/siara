@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
-import { Barcode, Boxes, PackagePlus, ShieldAlert, TrendingUp, Wallet } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Barcode, Boxes, PackagePlus, Plus, Search, ShieldAlert, TrendingUp, Wallet } from 'lucide-react';
+import { fetchSupabaseTable, insertSupabaseRow, updateSupabaseRow } from '../lib/supabase';
 import { useUiStore } from '../store/store';
 
-type StockItem = {
+export type StockItem = {
   id: string;
   barcode: string;
   name: string;
@@ -24,13 +25,13 @@ type StockItem = {
   notes: string;
 };
 
-const seedStock: StockItem[] = [
+const initialStock: StockItem[] = [
   {
     id: 'stk-1',
     barcode: 'HU-5W30-01',
-    name: 'Huile moteur 5W-30',
-    category: 'Huile',
-    engine: 'Renault Clio IV / K9K 1.5 dCi 90',
+    name: 'Huile moteur 5W-30 Synthétique',
+    category: 'Huile / زيت',
+    engine: 'Renault / Dacia / Peugeot / VW',
     quantity: 24,
     minQty: 12,
     purchasePrice: 3200,
@@ -44,13 +45,13 @@ const seedStock: StockItem[] = [
     brand: 'MANNOL',
     partNumber: 'MN-5W30-4L',
     warranty: '12 mois',
-    notes: 'Huile synthétique semi-rapide, compatible Renault / Peugeot / VW',
+    notes: 'زيت تخليقي ممتاز لجميع محركات الديزل والبنزين الحديثة',
   },
   {
     id: 'stk-2',
     barcode: 'FIL-HU-719',
     name: 'Filtre à huile MANN HU 719/7x',
-    category: 'Filtre',
+    category: 'Filtre / فلتر',
     engine: 'Renault Clio IV / K9K 1.5 dCi 90',
     quantity: 7,
     minQty: 10,
@@ -65,14 +66,14 @@ const seedStock: StockItem[] = [
     brand: 'MANN',
     partNumber: 'HU 719/7x',
     warranty: '6 mois',
-    notes: 'Filtre compatible Renault, Dacia, Nissan et Fiat',
+    notes: 'فلتر أصلي ألماني عالي التحمل',
   },
   {
     id: 'stk-3',
     barcode: 'FIL-AIR-2812',
     name: 'Filtre à air MANN CU 2812',
-    category: 'Filtre',
-    engine: 'Mercedes C-Class / OM651 2.1 CDI 170',
+    category: 'Filtre / فلتر',
+    engine: 'Mercedes C-Class / OM651 2.1 CDI',
     quantity: 3,
     minQty: 8,
     purchasePrice: 1500,
@@ -86,14 +87,14 @@ const seedStock: StockItem[] = [
     brand: 'MANN',
     partNumber: 'CU 2812',
     warranty: '12 mois',
-    notes: 'Pour moteur diesel / filtration renforcée',
+    notes: 'فلتر هواء لمحركات الديزل',
   },
   {
     id: 'stk-4',
     barcode: 'LIQ-BRAKE-01',
-    name: 'Liquide de frein DOT 4',
-    category: 'Liquide',
-    engine: 'Tous moteurs',
+    name: 'Liquide de frein DOT 4 (Castrol)',
+    category: 'Liquide / سوائل',
+    engine: 'Tous moteurs / عام',
     quantity: 15,
     minQty: 10,
     purchasePrice: 1200,
@@ -107,62 +108,116 @@ const seedStock: StockItem[] = [
     brand: 'Castrol',
     partNumber: 'DOT4-1L',
     warranty: '18 mois',
-    notes: 'Stock standard pour freinage et entretien',
+    notes: 'سائل فرامل عالي الجودة',
   },
 ];
 
-const initialForm = {
-  barcode: '',
-  name: '',
-  category: 'Huile',
-  engine: 'Renault Clio IV / K9K 1.5 dCi 90',
-  quantity: '12',
-  purchasePrice: '3200',
-  salePrice: '5400',
-  minQty: '8',
-};
-
-function formatMoney(value: number) {
-  return `DA ${new Intl.NumberFormat('fr-DZ').format(value)}`;
-}
+const INVENTORY_KEY = 'siara_inventory_stock_v2';
 
 export function InventoryPage() {
-  const { language } = useUiStore();
+  const { language, theme } = useUiStore();
+  const isDark = theme === 'dark';
   const isArabic = language === 'ar';
 
-  const [items, setItems] = useState<StockItem[]>(seedStock);
-  const [form, setForm] = useState(initialForm);
+  const [items, setItems] = useState<StockItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(INVENTORY_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialStock;
+  });
+
+  const [form, setForm] = useState({
+    barcode: '',
+    name: '',
+    category: 'Huile',
+    engine: '',
+    quantity: '10',
+    purchasePrice: '3000',
+    salePrice: '4500',
+    minQty: '5',
+    supplier: 'Fournisseur DZ',
+  });
+
   const [search, setSearch] = useState('');
   const [message, setMessage] = useState('');
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(seedStock[0]?.id ?? null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(initialStock[0].id);
+
+  // Sync from Supabase on mount
+  useEffect(() => {
+    fetchSupabaseTable<any>('inventory', '*').then((rows) => {
+      if (rows && rows.length > 0) {
+        setItems(
+          rows.map((r: any) => ({
+            id: String(r.id),
+            barcode: r.barcode || `BAR-${r.id}`,
+            name: r.product_name || 'Produit',
+            category: r.category || 'Huile',
+            engine: r.engine_compatibility || 'Tous moteurs',
+            quantity: Number(r.quantity || r.stock_quantity || 0),
+            minQty: Number(r.min_qty || 5),
+            purchasePrice: Number(r.purchase_price || 0),
+            salePrice: Number(r.sale_price || 0),
+            supplier: r.supplier || 'Fournisseur',
+            supplierPhone: r.supplier_phone || '+213 550 00 11 22',
+            supplierContact: r.supplier_contact || 'Contact',
+            location: r.location || 'Étagère A1',
+            expiryDate: r.expiry_date || '2028-12-31',
+            lastUpdated: r.updated_at ? r.updated_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
+            brand: r.brand || 'Marque',
+            partNumber: r.part_number || 'N/A',
+            warranty: r.warranty || '12 mois',
+            notes: r.notes || '',
+          }))
+        );
+      }
+    });
+  }, []);
+
+  // Sync to local storage
+  useEffect(() => {
+    try {
+      localStorage.setItem(INVENTORY_KEY, JSON.stringify(items));
+    } catch {}
+  }, [items]);
 
   const filteredItems = useMemo(() => {
-    const value = search.trim().toLowerCase();
-    if (!value) return items;
+    const val = search.trim().toLowerCase();
+    if (!val) return items;
+
     return items.filter((item) => {
-      const text = `${item.barcode} ${item.name} ${item.engine} ${item.category} ${item.supplier} ${item.brand} ${item.partNumber}`.toLowerCase();
-      return text.includes(value);
+      const text = `${item.barcode} ${item.name} ${item.engine} ${item.category} ${item.brand} ${item.supplier}`.toLowerCase();
+      return text.includes(val);
     });
   }, [items, search]);
 
   const selectedProduct = useMemo(
-    () => items.find((item) => item.id === selectedProductId) ?? filteredItems[0] ?? items[0] ?? null,
-    [filteredItems, items, selectedProductId],
+    () => items.find((i) => i.id === selectedProductId) ?? filteredItems[0] ?? items[0] ?? null,
+    [filteredItems, items, selectedProductId]
   );
 
-  const totalStockValue = items.reduce((sum, item) => sum + item.quantity * item.purchasePrice, 0);
-  const lowStockCount = items.filter((item) => item.quantity <= item.minQty).length;
-  const totalUnits = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalStockValue = items.reduce((sum, i) => sum + i.quantity * i.purchasePrice, 0);
+  const lowStockCount = items.filter((i) => i.quantity <= i.minQty).length;
+  const totalUnits = items.reduce((sum, i) => sum + i.quantity, 0);
+
+  const formatPrice = (v: number) => `DA ${new Intl.NumberFormat('fr-DZ').format(v)}`;
 
   const handleScanBarcode = () => {
     if (!form.barcode.trim()) {
-      setMessage(isArabic ? 'Veuillez saisir un code-barres.' : 'Veuillez saisir un code-barres.');
+      setMessage(isArabic ? 'يرجى إدخال أو مسح رمز الباركود أولاً.' : 'Veuillez saisir un code-barres.');
       return;
     }
 
-    const match = items.find((item) => item.barcode.toLowerCase() === form.barcode.trim().toLowerCase());
+    const match = items.find((i) => i.barcode.toLowerCase() === form.barcode.trim().toLowerCase());
     if (!match) {
-      setMessage(isArabic ? 'Produit non trouvé, vous pouvez l’ajouter.' : 'Produit non trouvé, vous pouvez l’ajouter.');
+      setMessage(
+        isArabic
+          ? 'القطعة غير موجودة بالمخزون، يمكنك تعبئة البيانات لإضافتها.'
+          : 'Produit non trouvé, vous pouvez le créer.'
+      );
       return;
     }
 
@@ -175,231 +230,275 @@ export function InventoryPage() {
       purchasePrice: String(match.purchasePrice),
       salePrice: String(match.salePrice),
       minQty: String(match.minQty),
+      supplier: match.supplier,
     });
-
-    setMessage(
-      isArabic ? `Produit détecté : ${match.name}` : `Produit détecté : ${match.name}`,
-    );
+    setSelectedProductId(match.id);
+    setMessage(isArabic ? `تم العثور على القطعة: ${match.name}` : `Produit détecté : ${match.name}`);
   };
 
-  const handleAddStock = () => {
+  const handleAddStock = async () => {
     if (!form.barcode.trim() || !form.name.trim()) {
-      setMessage(isArabic ? 'Code-barres et nom requis.' : 'Code-barres et nom requis.');
+      setMessage(isArabic ? 'الباركود واسم القطعة مطلوبان.' : 'Code-barres et nom requis.');
       return;
     }
 
     const qty = Number(form.quantity || 0);
     const purchase = Number(form.purchasePrice || 0);
     const sale = Number(form.salePrice || 0);
-    const minQty = Number(form.minQty || 0);
+    const minQty = Number(form.minQty || 5);
 
-    if (qty <= 0 || purchase <= 0 || sale <= 0) {
-      setMessage(isArabic ? 'Quantité et prix doivent être valides.' : 'Quantité et prix doivent être valides.');
-      return;
+    const existingIndex = items.findIndex(
+      (i) => i.barcode.toLowerCase() === form.barcode.trim().toLowerCase()
+    );
+
+    if (existingIndex >= 0) {
+      const existing = items[existingIndex];
+      const updatedItem = {
+        ...existing,
+        name: form.name,
+        quantity: existing.quantity + qty,
+        purchasePrice: purchase > 0 ? purchase : existing.purchasePrice,
+        salePrice: sale > 0 ? sale : existing.salePrice,
+        minQty,
+        lastUpdated: new Date().toISOString().slice(0, 10),
+      };
+
+      const nextItems = [...items];
+      nextItems[existingIndex] = updatedItem;
+      setItems(nextItems);
+
+      // Supabase update
+      try {
+        await updateSupabaseRow('inventory', `barcode=eq.${encodeURIComponent(existing.barcode)}`, {
+          quantity: updatedItem.quantity,
+          purchase_price: updatedItem.purchasePrice,
+          sale_price: updatedItem.salePrice,
+        });
+      } catch {}
+
+      setMessage(isArabic ? 'تم تحديث كمية القطعة بنجاح!' : 'Quantité mise à jour avec succès !');
+    } else {
+      const newItem: StockItem = {
+        id: `stk-${Date.now()}`,
+        barcode: form.barcode.trim(),
+        name: form.name.trim(),
+        category: form.category,
+        engine: form.engine.trim() || (isArabic ? 'متوافق مع عدة محركات' : 'Multi-moteurs'),
+        quantity: qty,
+        minQty,
+        purchasePrice: purchase,
+        salePrice: sale,
+        supplier: form.supplier || 'Fournisseur Algérie',
+        supplierPhone: '+213 550 00 00 00',
+        supplierContact: 'Contact',
+        location: 'Étagère A1',
+        expiryDate: '2028-12-31',
+        lastUpdated: new Date().toISOString().slice(0, 10),
+        brand: 'MANNOL',
+        partNumber: form.barcode.trim(),
+        warranty: '12 mois',
+        notes: isArabic ? 'منتج مضاف جديد' : 'Nouveau produit ajouté',
+      };
+
+      setItems([newItem, ...items]);
+      setSelectedProductId(newItem.id);
+
+      // Supabase insert
+      try {
+        await insertSupabaseRow('inventory', {
+          garage_id: 1,
+          barcode: newItem.barcode,
+          product_name: newItem.name,
+          category: newItem.category,
+          quantity: newItem.quantity,
+          min_qty: newItem.minQty,
+          purchase_price: newItem.purchasePrice,
+          sale_price: newItem.salePrice,
+          supplier: newItem.supplier,
+          location: newItem.location,
+        });
+      } catch {}
+
+      setMessage(isArabic ? 'تمت إضافة القطعة الجديدة إلى المخزون بنجاح!' : 'Nouvel article ajouté au stock !');
     }
 
-    setItems((current) => {
-      const existingIndex = current.findIndex((item) => item.barcode.toLowerCase() === form.barcode.trim().toLowerCase());
-      if (existingIndex >= 0) {
-        const existing = current[existingIndex];
-        const updated = [...current];
-        updated[existingIndex] = {
-          ...existing,
-          name: form.name,
-          category: form.category,
-          engine: form.engine,
-          quantity: existing.quantity + qty,
-          minQty,
-          purchasePrice: purchase,
-          salePrice: sale,
-            supplier: existing.supplier,
-            supplierPhone: existing.supplierPhone,
-            supplierContact: existing.supplierContact,
-            location: existing.location,
-            expiryDate: existing.expiryDate,
-            lastUpdated: new Date().toISOString().slice(0, 10),
-            brand: existing.brand,
-            partNumber: existing.partNumber,
-            warranty: existing.warranty,
-            notes: existing.notes,
-          };
-          return updated;
-        }
-
-        return [
-          {
-            id: `stk-${Date.now()}`,
-            barcode: form.barcode.trim(),
-            name: form.name.trim(),
-            category: form.category,
-            engine: form.engine,
-            quantity: qty,
-            minQty,
-            purchasePrice: purchase,
-            salePrice: sale,
-            supplier: 'Fournisseur à définir',
-            supplierPhone: '+213 000 000 000',
-            supplierContact: 'Contact',
-            location: 'À affecter',
-            expiryDate: '2027-12-31',
-            lastUpdated: new Date().toISOString().slice(0, 10),
-            brand: 'Brand',
-            partNumber: 'N/A',
-            warranty: 'N/A',
-            notes: 'Produit ajouté manuellement',
-          },
-          ...current,
-        ];
-      });
-
-    setMessage(isArabic ? 'Stock ajouté avec succès.' : 'Stock ajouté avec succès.');
-    setForm(initialForm);
+    setForm({
+      barcode: '',
+      name: '',
+      category: 'Huile',
+      engine: '',
+      quantity: '10',
+      purchasePrice: '3000',
+      salePrice: '4500',
+      minQty: '5',
+      supplier: 'Fournisseur DZ',
+    });
   };
 
   const quickAdd = (id: string, qty: number) => {
-    setItems((current) =>
-      current.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              quantity: item.quantity + qty,
-              lastUpdated: new Date().toISOString().slice(0, 10),
-            }
-          : item,
-      ),
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === id
+          ? { ...i, quantity: i.quantity + qty, lastUpdated: new Date().toISOString().slice(0, 10) }
+          : i
+      )
     );
   };
 
+  const cardSurface = isDark ? 'border-slate-800 bg-slate-900/90' : 'border-slate-200 bg-white shadow-sm';
+  const subCard = isDark ? 'border-slate-800 bg-slate-950/70' : 'border-slate-200 bg-slate-50';
+  const baseText = isDark ? 'text-white' : 'text-slate-900';
+  const inputClass = isDark
+    ? 'border-slate-700 bg-slate-950 text-white placeholder:text-slate-500 focus:border-amber-500'
+    : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-amber-500';
+
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
-        <div className="flex items-center justify-between gap-3">
+      {/* Top Header & Inventory KPIs */}
+      <div className={`rounded-2xl border p-5 ${cardSurface}`}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-amber-400">{isArabic ? 'المخزون' : 'Stock'}</p>
-            <h2 className="mt-2 text-3xl font-bold text-white">{isArabic ? 'إدارة المخزون' : 'Gestion du stock'}</h2>
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-amber-500">
+              {isArabic ? 'المخزون والقطع' : 'Stock & Pièces'}
+            </p>
+            <h2 className={`mt-1 text-2xl font-black sm:text-3xl ${baseText}`}>
+              {isArabic ? 'إدارة المخزون وقطع الغيار والزيوت' : 'Gestion du stock & Pièces détachées'}
+            </h2>
           </div>
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
-            {isArabic ? 'محدث' : 'Live'}
-          </div>
+          <span className="inline-flex rounded-xl bg-emerald-500/15 px-3 py-1.5 text-xs font-bold text-emerald-400">
+            {isArabic ? 'مزامنة مباشرة 100%' : 'Synchronisé en direct'}
+          </span>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-3">
-          <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-            <div className="flex items-center gap-2 text-slate-400">
-              <Boxes size={16} />
-              <span className="text-sm">{isArabic ? 'إجمالي القطع' : 'Pièces totales'}</span>
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className={`rounded-xl border p-3.5 ${subCard}`}>
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+              <Boxes size={15} />
+              <span>{isArabic ? 'إجمالي القطع المتوفرة' : 'Unités en stock'}</span>
             </div>
-            <div className="mt-3 text-2xl font-bold text-white">{totalUnits}</div>
+            <p className={`mt-2 text-xl font-black ${baseText}`}>{totalUnits} {isArabic ? 'قطعة' : 'pcs'}</p>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-            <div className="flex items-center gap-2 text-slate-400">
-              <ShieldAlert size={16} />
-              <span className="text-sm">{isArabic ? 'تنبيهات المخزون' : 'Alertes stock'}</span>
+
+          <div className={`rounded-xl border p-3.5 ${subCard}`}>
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+              <ShieldAlert size={15} className="text-amber-400" />
+              <span>{isArabic ? 'تنبيهات انخفاض المخزون' : 'Alertes stock faible'}</span>
             </div>
-            <div className="mt-3 text-2xl font-bold text-amber-300">{lowStockCount}</div>
+            <p className="mt-2 text-xl font-black text-amber-400">{lowStockCount} {isArabic ? 'منتجات' : 'produits'}</p>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-            <div className="flex items-center gap-2 text-slate-400">
-              <Wallet size={16} />
-              <span className="text-sm">{isArabic ? 'قيمة المخزون' : 'Valeur stock'}</span>
+
+          <div className={`col-span-2 rounded-xl border p-3.5 sm:col-span-1 ${subCard}`}>
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+              <Wallet size={15} />
+              <span>{isArabic ? 'القيمة المالية للمخزون' : 'Valeur marchande'}</span>
             </div>
-            <div className="mt-3 text-2xl font-bold text-white">{formatMoney(totalStockValue)}</div>
+            <p className="mt-2 text-xl font-black text-emerald-400">{formatPrice(totalStockValue)}</p>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[0.92fr_1.38fr]">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
-          <div className="mb-4 flex items-center gap-2 text-amber-300">
+      {/* Main Stock Interface */}
+      <div className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
+        {/* Left: Add / Update Stock Item Form */}
+        <div className={`rounded-2xl border p-5 space-y-4 ${cardSurface}`}>
+          <div className="flex items-center gap-2 text-amber-500">
             <PackagePlus size={18} />
-            <h3 className="text-lg font-semibold text-white">{isArabic ? 'إضافة قطعة جديدة' : 'Ajouter une pièce'}</h3>
+            <h3 className={`text-base font-bold ${baseText}`}>
+              {isArabic ? 'إضافة / توريد قطع للمخزون' : 'Ajouter / Entrée de stock'}
+            </h3>
           </div>
 
           <div className="space-y-3">
             <div className="flex gap-2">
               <input
                 value={form.barcode}
-                onChange={(event) => setForm((current) => ({ ...current, barcode: event.target.value }))}
-                placeholder={isArabic ? 'Code-barres' : 'Code-barres'}
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none"
+                onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+                placeholder={isArabic ? 'رمز الباركود (مثال: HU-5W30-01)' : 'Code-barres'}
+                className={`w-full rounded-xl border px-3 py-2 text-xs font-mono focus:outline-none ${inputClass}`}
               />
               <button
                 type="button"
                 onClick={handleScanBarcode}
-                className="inline-flex items-center gap-2 rounded-xl border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm text-amber-300"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-400 hover:bg-amber-500/20"
               >
-                <Barcode size={16} />
-                {isArabic ? 'مسح' : 'Scanner'}
+                <Barcode size={15} />
+                <span>{isArabic ? 'مسح' : 'Scanner'}</span>
               </button>
             </div>
 
             <input
               value={form.name}
-              onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-              placeholder={isArabic ? 'Nom de la pièce' : 'Nom de la pièce'}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none"
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder={isArabic ? 'اسم القطعة أو نوع الزيت *' : 'Nom du produit *'}
+              className={`w-full rounded-xl border px-3 py-2 text-xs focus:outline-none ${inputClass}`}
             />
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-2">
               <select
                 value={form.category}
-                onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
-                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white focus:border-amber-500 focus:outline-none"
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                className={`rounded-xl border px-3 py-2 text-xs focus:outline-none ${inputClass}`}
               >
-                <option value="Huile">Huile</option>
-                <option value="Filtre">Filtre</option>
-                <option value="Liquide">Liquide</option>
-                <option value="Autre">Autre</option>
+                <option value="Huile">{isArabic ? 'زيت محرك' : 'Huile'}</option>
+                <option value="Filtre">{isArabic ? 'فلتر' : 'Filtre'}</option>
+                <option value="Liquide">{isArabic ? 'سوائل وفرامل' : 'Liquide'}</option>
+                <option value="Pièce">{isArabic ? 'قطع أخرى' : 'Autre pièce'}</option>
               </select>
 
               <input
                 value={form.engine}
-                onChange={(event) => setForm((current) => ({ ...current, engine: event.target.value }))}
-                placeholder={isArabic ? 'Moteur / compatibilité' : 'Moteur / compatibilité'}
-                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none"
+                onChange={(e) => setForm({ ...form, engine: e.target.value })}
+                placeholder={isArabic ? 'توافق المحرك (Clio, X5...)' : 'Compatibilité moteur'}
+                className={`rounded-xl border px-3 py-2 text-xs focus:outline-none ${inputClass}`}
               />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input
-                type="number"
-                min={0}
-                value={form.quantity}
-                onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))}
-                placeholder={isArabic ? 'Quantité ajoutée' : 'Quantité ajoutée'}
-                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none"
-              />
-              <input
-                type="number"
-                min={0}
-                value={form.minQty}
-                onChange={(event) => setForm((current) => ({ ...current, minQty: event.target.value }))}
-                placeholder={isArabic ? 'Quantité minimale' : 'Quantité minimale'}
-                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none"
-              />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="mb-1 block text-[11px] text-slate-400">{isArabic ? 'الكمية المضافة' : 'Quantité'}</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={form.quantity}
+                  onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                  className={`w-full rounded-xl border px-3 py-2 text-xs focus:outline-none ${inputClass}`}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] text-slate-400">{isArabic ? 'الحد الأدنى للتنبيه' : 'Alerte mini'}</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={form.minQty}
+                  onChange={(e) => setForm({ ...form, minQty: e.target.value })}
+                  className={`w-full rounded-xl border px-3 py-2 text-xs focus:outline-none ${inputClass}`}
+                />
+              </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input
-                type="number"
-                min={0}
-                value={form.purchasePrice}
-                onChange={(event) => setForm((current) => ({ ...current, purchasePrice: event.target.value }))}
-                placeholder={isArabic ? 'Prix d’achat' : 'Prix d’achat'}
-                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none"
-              />
-              <input
-                type="number"
-                min={0}
-                value={form.salePrice}
-                onChange={(event) => setForm((current) => ({ ...current, salePrice: event.target.value }))}
-                placeholder={isArabic ? 'Prix de vente' : 'Prix de vente'}
-                className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none"
-              />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="mb-1 block text-[11px] text-slate-400">{isArabic ? 'سعر الشراء (دج)' : 'Prix d’achat'}</label>
+                <input
+                  type="number"
+                  value={form.purchasePrice}
+                  onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })}
+                  className={`w-full rounded-xl border px-3 py-2 text-xs focus:outline-none ${inputClass}`}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] text-slate-400">{isArabic ? 'سعر البيع للزبون (دج)' : 'Prix de vente'}</label>
+                <input
+                  type="number"
+                  value={form.salePrice}
+                  onChange={(e) => setForm({ ...form, salePrice: e.target.value })}
+                  className={`w-full rounded-xl border px-3 py-2 text-xs font-bold text-amber-500 focus:outline-none ${inputClass}`}
+                />
+              </div>
             </div>
 
             {message && (
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
                 {message}
               </div>
             )}
@@ -407,112 +506,110 @@ export function InventoryPage() {
             <button
               type="button"
               onClick={handleAddStock}
-              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 px-3 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-amber-500/20"
+              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 hover:brightness-105 active:scale-95"
             >
-              {isArabic ? 'Ajouter au stock' : 'Ajouter au stock'}
+              {isArabic ? 'حفظ القطعة في المخزون' : 'Ajouter / Mettre à jour le stock'}
             </button>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-amber-300">
+        {/* Right: Stock Items Table & Item Details */}
+        <div className={`rounded-2xl border p-5 space-y-4 ${cardSurface}`}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-amber-500">
               <TrendingUp size={18} />
-              <h3 className="text-lg font-semibold text-white">{isArabic ? 'Stock actuel' : 'Stock actuel'}</h3>
+              <h3 className={`text-base font-bold ${baseText}`}>
+                {isArabic ? 'قائمة المواد المتوفرة' : 'Inventaire disponible'}
+              </h3>
             </div>
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={isArabic ? 'Rechercher...' : 'Rechercher...'}
-              className="w-52 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none"
-            />
+
+            <div className="relative w-full max-w-xs">
+              <Search size={15} className={`pointer-events-none absolute top-2.5 text-slate-400 ${isArabic ? 'right-3' : 'left-3'}`} />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={isArabic ? 'بحث بالاسم، الباركود...' : 'Recherche stock...'}
+                className={`w-full rounded-xl border py-1.5 text-xs focus:outline-none ${isArabic ? 'pr-8 pl-3' : 'pl-8 pr-3'} ${inputClass}`}
+              />
+            </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="overflow-hidden rounded-xl border border-slate-800">
-              <div className="max-h-[420px] overflow-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="bg-slate-950 text-slate-300">
-                    <tr>
-                      <th className="px-3 py-2">Code</th>
-                      <th className="px-3 py-2">Produit</th>
-                      <th className="px-3 py-2">Qté</th>
-                      <th className="px-3 py-2">Statut</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredItems.map((item) => {
-                      const low = item.quantity <= item.minQty;
-                      return (
-                        <tr
-                          key={item.id}
-                          onClick={() => setSelectedProductId(item.id)}
-                          className={`cursor-pointer border-t border-slate-800 ${selectedProduct?.id === item.id ? 'bg-slate-800/80' : 'bg-slate-900/80'} text-slate-200`}
-                        >
-                          <td className="px-3 py-2 font-medium text-amber-300">{item.barcode}</td>
-                          <td className="px-3 py-2">
-                            <div className="font-medium text-white">{item.name}</div>
-                            <div className="text-xs text-slate-400">{item.category}</div>
-                          </td>
-                          <td className="px-3 py-2 font-semibold text-white">{item.quantity}</td>
-                          <td className="px-3 py-2">
-                            <span className={`rounded-full px-2 py-1 text-[10px] font-medium ${low ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>
-                              {low ? (isArabic ? 'Faible' : 'Faible') : (isArabic ? 'OK' : 'OK')}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+          <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            {/* Table */}
+            <div className="max-h-96 overflow-y-auto rounded-xl border border-slate-800">
+              <table className="w-full text-start text-xs">
+                <thead className={`sticky top-0 ${isDark ? 'bg-slate-950 text-slate-400' : 'bg-slate-100 text-slate-600'}`}>
+                  <tr>
+                    <th className="py-2 px-3">{isArabic ? 'القطعة' : 'Produit'}</th>
+                    <th className="py-2 px-3">{isArabic ? 'الكمية' : 'Qté'}</th>
+                    <th className="py-2 px-3">{isArabic ? 'الحالة' : 'Statut'}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/40">
+                  {filteredItems.map((item) => {
+                    const isLow = item.quantity <= item.minQty;
+                    const isSelected = selectedProduct?.id === item.id;
+                    return (
+                      <tr
+                        key={item.id}
+                        onClick={() => setSelectedProductId(item.id)}
+                        className={`cursor-pointer transition ${
+                          isSelected
+                            ? 'bg-amber-500/15'
+                            : isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <td className="py-2.5 px-3">
+                          <strong className={baseText}>{item.name}</strong>
+                          <div className="font-mono text-[10px] text-amber-400">{item.barcode}</div>
+                        </td>
+                        <td className={`py-2.5 px-3 font-bold ${baseText}`}>{item.quantity}</td>
+                        <td className="py-2.5 px-3">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              isLow ? 'bg-rose-500/15 text-rose-400' : 'bg-emerald-500/15 text-emerald-400'
+                            }`}
+                          >
+                            {isLow ? (isArabic ? 'منخفض' : 'Faible') : (isArabic ? 'متوفر' : 'OK')}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
 
-            <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-              {selectedProduct ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.25em] text-slate-500">Produit</div>
-                      <div className="mt-1 text-lg font-semibold text-white">{selectedProduct.name}</div>
-                    </div>
-                    <span className="rounded-full bg-amber-500/15 px-2 py-1 text-[10px] text-amber-300">{selectedProduct.category}</span>
+            {/* Selected Item Card */}
+            {selectedProduct ? (
+              <div className={`space-y-3 rounded-xl border p-4 text-xs ${subCard}`}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase text-amber-400">{selectedProduct.category}</span>
+                    <h4 className={`text-sm font-bold ${baseText}`}>{selectedProduct.name}</h4>
                   </div>
-
-                  <div className="grid gap-2 text-sm text-slate-300">
-                    <div className="flex justify-between gap-3"><span>Code-barres</span><span className="text-white font-medium">{selectedProduct.barcode}</span></div>
-                    <div className="flex justify-between gap-3"><span>Marque</span><span className="text-white font-medium">{selectedProduct.brand}</span></div>
-                    <div className="flex justify-between gap-3"><span>Référence</span><span className="text-white font-medium">{selectedProduct.partNumber}</span></div>
-                    <div className="flex justify-between gap-3"><span>Compatibilité moteur</span><span className="text-white font-medium text-right">{selectedProduct.engine}</span></div>
-                    <div className="flex justify-between gap-3"><span>Quantité</span><span className="text-white font-medium">{selectedProduct.quantity}</span></div>
-                    <div className="flex justify-between gap-3"><span>Min.</span><span className="text-white font-medium">{selectedProduct.minQty}</span></div>
-                    <div className="flex justify-between gap-3"><span>Prix achat</span><span className="text-white font-medium">{formatMoney(selectedProduct.purchasePrice)}</span></div>
-                    <div className="flex justify-between gap-3"><span>Prix vente</span><span className="text-emerald-300 font-medium">{formatMoney(selectedProduct.salePrice)}</span></div>
-                    <div className="flex justify-between gap-3"><span>Fournisseur</span><span className="text-white font-medium text-right">{selectedProduct.supplier}</span></div>
-                    <div className="flex justify-between gap-3"><span>Contact</span><span className="text-white font-medium text-right">{selectedProduct.supplierContact}</span></div>
-                    <div className="flex justify-between gap-3"><span>Tél.</span><span className="text-white font-medium">{selectedProduct.supplierPhone}</span></div>
-                    <div className="flex justify-between gap-3"><span>Emplacement</span><span className="text-white font-medium">{selectedProduct.location}</span></div>
-                    <div className="flex justify-between gap-3"><span>Expiration</span><span className="text-white font-medium">{selectedProduct.expiryDate}</span></div>
-                    <div className="flex justify-between gap-3"><span>Garantie</span><span className="text-white font-medium">{selectedProduct.warranty}</span></div>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3 text-sm text-slate-300">
-                    <div className="mb-1 text-[10px] uppercase tracking-[0.2em] text-slate-500">Notes</div>
-                    <div>{selectedProduct.notes}</div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => quickAdd(selectedProduct.id, 10)}
-                    className="w-full rounded-xl border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-300"
-                  >
-                    +10 unités
-                  </button>
+                  <span className="rounded-lg bg-slate-800 px-2 py-0.5 font-mono text-amber-400">
+                    {selectedProduct.barcode}
+                  </span>
                 </div>
-              ) : (
-                <div className="text-sm text-slate-400">Aucun produit sélectionné</div>
-              )}
-            </div>
+
+                <div className="space-y-1.5 border-t border-slate-800 pt-2 text-slate-300">
+                  <div className="flex justify-between"><span className="text-slate-500">{isArabic ? 'الماركة:' : 'Marque:'}</span> <strong>{selectedProduct.brand}</strong></div>
+                  <div className="flex justify-between"><span className="text-slate-500">{isArabic ? 'سعر الشراء:' : 'Achat:'}</span> <span>{formatPrice(selectedProduct.purchasePrice)}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">{isArabic ? 'سعر البيع:' : 'Vente:'}</span> <strong className="text-emerald-400">{formatPrice(selectedProduct.salePrice)}</strong></div>
+                  <div className="flex justify-between"><span className="text-slate-500">{isArabic ? 'المورد:' : 'Fournisseur:'}</span> <span>{selectedProduct.supplier}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">{isArabic ? 'الموقع في الورشة:' : 'Emplacement:'}</span> <span>{selectedProduct.location}</span></div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => quickAdd(selectedProduct.id, 5)}
+                  className="w-full rounded-xl border border-amber-500/40 bg-amber-500/10 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20"
+                >
+                  + 5 {isArabic ? 'قطع توريد سريع' : 'unités'}
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

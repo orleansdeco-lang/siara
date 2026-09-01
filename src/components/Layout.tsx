@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Moon, Search, Sun, Languages } from 'lucide-react';
-import { useSidebarStore, useUiStore } from '../store/store';
+import { Database, Languages, Moon, Plus, Sun } from 'lucide-react';
+import { useGarageStore, useSidebarStore, useUiStore } from '../store/store';
 
 interface LayoutProps {
   children: ReactNode;
@@ -10,58 +10,91 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const { isExpanded } = useSidebarStore();
   const { theme, language, toggleTheme, setLanguage } = useUiStore();
+  const { name: garageName } = useGarageStore();
 
   const isDark = theme === 'dark';
-  const dashboardLabel = language === 'ar' ? 'لوحة التحكم' : 'Dashboard';
-  const newServiceLabel = language === 'ar' ? 'خدمة جديدة' : 'Nouveau service';
+  const isArabic = language === 'ar';
+  const dashboardLabel = isArabic ? 'لوحة تحكم الورشة' : 'Atelier de Vidange & Mécanique';
+  const newServiceLabel = isArabic ? 'خدمة جديدة' : 'Nouveau service';
+
+  const marginClass = isArabic
+    ? isExpanded
+      ? 'mr-64 sm:mr-72'
+      : 'mr-20'
+    : isExpanded
+      ? 'ml-64 sm:ml-72'
+      : 'ml-20';
 
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'}`}>
-      <div className={`transition-all duration-300 ${isExpanded ? 'pl-72' : 'pl-20'}`}>
-        <header className={`sticky top-0 z-30 border-b backdrop-blur-sm ${isDark ? 'border-slate-800 bg-slate-950/80' : 'border-slate-200 bg-white/80'}`}>
-          <div className="flex items-center justify-between px-6 py-4">
+    <div className={`min-h-screen transition-colors duration-200 ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'}`}>
+      <div className={`transition-all duration-300 ${marginClass}`}>
+        <header
+          className={`sticky top-0 z-30 border-b backdrop-blur-md transition-colors duration-200 ${
+            isDark ? 'border-slate-800 bg-slate-950/85' : 'border-slate-200 bg-white/85'
+          }`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-3.5">
             <div className="flex items-center gap-3">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-slate-50'}`}>
-                <Search size={18} className={isDark ? 'text-slate-300' : 'text-slate-600'} />
+              <div
+                className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
+                  isDark ? 'border-slate-800 bg-slate-900 text-amber-400' : 'border-slate-200 bg-slate-50 text-amber-600'
+                }`}
+              >
+                <Database size={18} />
               </div>
               <div>
-                <p className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{dashboardLabel}</p>
-                <h1 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>SIARA</h1>
+                <p className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {dashboardLabel}
+                </p>
+                <h1 className={`text-base font-bold sm:text-lg ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {garageName}
+                </h1>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Language Switcher */}
               <button
                 type="button"
                 onClick={() => setLanguage(language === 'fr' ? 'ar' : 'fr')}
-                className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition ${
-                  isDark ? 'border-slate-800 bg-slate-900 text-slate-200 hover:border-slate-700' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                  isDark
+                    ? 'border-slate-800 bg-slate-900 text-slate-200 hover:border-slate-700 hover:bg-slate-800'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                 }`}
+                title={isArabic ? 'Changer la langue en Français' : 'تغيير اللغة إلى العربية'}
               >
-                <Languages size={16} />
-                {language === 'fr' ? 'FR' : 'AR'}
+                <Languages size={15} className="text-amber-400" />
+                <span>{language === 'fr' ? 'العربية' : 'Français'}</span>
               </button>
+
+              {/* Theme Switcher */}
               <button
                 type="button"
                 onClick={toggleTheme}
                 className={`rounded-xl border p-2 transition ${
-                  isDark ? 'border-slate-800 bg-slate-900 text-slate-200 hover:border-slate-700' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                  isDark
+                    ? 'border-slate-800 bg-slate-900 text-amber-300 hover:border-slate-700 hover:bg-slate-800'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                 }`}
                 aria-label="Toggle theme"
               >
-                {isDark ? <Sun size={18} /> : <Moon size={18} />}
+                {isDark ? <Sun size={17} /> : <Moon size={17} />}
               </button>
+
+              {/* New Service Fast Action */}
               <Link
                 to="/services/new"
-                className="inline-flex items-center rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-amber-500/20 transition hover:brightness-110"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 px-3.5 py-2 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 transition hover:brightness-105 active:scale-95 sm:text-sm"
               >
-                {newServiceLabel}
+                <Plus size={16} />
+                <span>{newServiceLabel}</span>
               </Link>
             </div>
           </div>
         </header>
 
-        <main className="p-6">{children}</main>
+        <main className="p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );

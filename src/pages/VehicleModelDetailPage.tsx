@@ -1,8 +1,9 @@
-import { ArrowLeft, Droplets, Gauge, Sparkles, Wrench } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
-import { useSupabaseTable } from "../lib/supabase";
+import { ArrowLeft, ArrowRight, Droplets, Gauge, ShieldCheck, Sparkles, Wrench } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import { useSupabaseTable } from '../lib/supabase';
+import { useUiStore } from '../store/store';
 
-type VehicleModelRow = {
+export type VehicleModelRow = {
   id?: string;
   model_name?: string;
   name?: string;
@@ -25,257 +26,225 @@ type VehicleModelRow = {
   status?: string;
 };
 
-const coerceArray = (value: string[] | string | null | undefined): string[] => {
-  if (Array.isArray(value)) {
-    return value.filter(Boolean).map((item) => String(item).trim());
-  }
-
-  if (typeof value === "string") {
-    const compact = value.trim();
-    if (!compact) return [];
-
-    try {
-      const parsed = JSON.parse(compact);
-      if (Array.isArray(parsed)) {
-        return parsed.filter(Boolean).map((item) => String(item).trim());
-      }
-    } catch {
-      // ignore JSON parse errors and fall back to comma-separated splitting
-    }
-
-    return compact
-      .split(/[;,]/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-
-  return [];
-};
-
-const normalizeVehicleModel = (model: VehicleModelRow): VehicleModelRow => ({
-  ...model,
-  id: model.id ?? model.model_name ?? model.name ?? `${model.engine_code ?? "vehicle"}-${model.generation ?? "model"}`,
-  model_name: model.model_name ?? model.name ?? "Mod�le inconnu",
-  generation: model.generation ?? "G�n�ration inconnue",
-  engine_code: model.engine_code ?? model.engine ?? "N/A",
-  compatible_filter_refs: coerceArray(model.compatible_filter_refs),
-});
-
 const fallbackModels: VehicleModelRow[] = [
   {
-    id: "duster-sample",
-    model_name: "Duster",
-    generation: "Duster II",
-    engine_code: "K9K 1.5 Blue dCi 115",
-    fuel_type: "diesel",
+    id: 'duster-sample',
+    model_name: 'Dacia Duster',
+    generation: 'Duster II (2017 - 2022)',
+    engine_code: 'K9K 1.5 Blue dCi 115',
+    fuel_type: 'Diesel',
     year_start: 2017,
     year_end: 2022,
-    oil_capacity_liters: "4.500",
-    recommended_viscosity: "5W-30",
-    recommended_spec: "RN0720",
-    compatible_filter_refs: ["MANN-HU719/7x"],
+    oil_capacity_liters: '4.5',
+    oil_capacity_with_filter: '4.5',
+    oil_capacity_without_filter: '4.2',
+    recommended_viscosity: '5W-30',
+    recommended_spec: 'RN0720 / ACEA C4',
+    compatible_filter_refs: ['MANN-HU719/7x', 'PUR-LS489A'],
     recommended_interval_km: 10000,
-    oil_capacity_with_filter: "4.500",
-    oil_capacity_without_filter: "4.200",
     recommended_interval_km_normal: 10000,
     recommended_interval_km_severe: 5000,
-    oil_change_notes: "Vidange recommand�e tous les 10 000 km en conduite normale.",
-    status: "verified",
+    oil_change_notes: 'محرك بحاجة لزيت Low-SAPS للمحافظة على فلتر الجسيمات DPF. يوصى بتبديل الفلتر مع كل غيار.',
+    status: 'verified',
   },
   {
-    id: "clio-sample",
-    model_name: "Clio",
-    generation: "Clio IV",
-    engine_code: "K9K 1.5 dCi 90",
-    fuel_type: "diesel",
+    id: 'clio-sample',
+    model_name: 'Renault Clio',
+    generation: 'Clio IV (2013 - 2019)',
+    engine_code: 'K9K 1.5 dCi 90',
+    fuel_type: 'Diesel',
     year_start: 2013,
     year_end: 2019,
-    oil_capacity_liters: "4.500",
-    recommended_viscosity: "5W-30",
-    recommended_spec: "RN0720",
-    compatible_filter_refs: ["MANN-HU719/7x", "PUR-LS489A"],
+    oil_capacity_liters: '4.5',
+    oil_capacity_with_filter: '4.5',
+    oil_capacity_without_filter: '4.2',
+    recommended_viscosity: '5W-30 / 5W-40',
+    recommended_spec: 'RN0720 / RN0710',
+    compatible_filter_refs: ['MANN-HU719/7x', 'PUR-LS489A', 'Bosch 0986AG'],
     recommended_interval_km: 10000,
-    oil_capacity_with_filter: "4.500",
-    oil_capacity_without_filter: "4.200",
     recommended_interval_km_normal: 10000,
     recommended_interval_km_severe: 5000,
-    oil_change_notes: "Suivre l�intervalle court en conduite urbaine ou en conditions difficiles.",
-    status: "verified",
+    oil_change_notes: 'في القيادة الحضرية والازدحام الشديد، ينصح بتبديل الزيت كل 7,000 إلى 8,000 كم.',
+    status: 'verified',
   },
   {
-    id: "megane-sample",
-    model_name: "Megane",
-    generation: "Megane IV",
-    engine_code: "R9M 1.6 dCi 130",
-    fuel_type: "diesel",
+    id: 'megane-sample',
+    model_name: 'Renault Megane',
+    generation: 'Megane IV (2016 - 2020)',
+    engine_code: 'R9M 1.6 dCi 130',
+    fuel_type: 'Diesel',
     year_start: 2016,
     year_end: 2020,
-    oil_capacity_liters: "5.000",
-    recommended_viscosity: "5W-30",
-    recommended_spec: "RN0720",
-    compatible_filter_refs: ["MANN-HU719/7x"],
+    oil_capacity_liters: '5.0',
+    oil_capacity_with_filter: '5.0',
+    oil_capacity_without_filter: '4.7',
+    recommended_viscosity: '5W-30',
+    recommended_spec: 'RN0720',
+    compatible_filter_refs: ['MANN-HU719/7x', 'Mahle KX-063'],
     recommended_interval_km: 15000,
-    oil_capacity_with_filter: "5.000",
-    oil_capacity_without_filter: "4.700",
     recommended_interval_km_normal: 15000,
     recommended_interval_km_severe: 7500,
-    oil_change_notes: "Ce moteur reste stable avec une vidange tous les 15 000 km en usage standard.",
-    status: "verified",
-  },
-  {
-    id: "hilux-sample",
-    model_name: "Hilux",
-    generation: "Hilux VII",
-    engine_code: "2KD-FTV 2.5 D-4D 102",
-    fuel_type: "diesel",
-    year_start: 2005,
-    year_end: 2015,
-    oil_capacity_liters: "7.000",
-    recommended_viscosity: "5W-30",
-    recommended_spec: "ACEA B3",
-    compatible_filter_refs: ["MANN-HU719/7x"],
-    recommended_interval_km: 10000,
-    oil_capacity_with_filter: "7.000",
-    oil_capacity_without_filter: "6.700",
-    recommended_interval_km_normal: 10000,
-    recommended_interval_km_severe: 5000,
-    oil_change_notes: "Pour les missions lourdes, raccourcir l�intervalle � 5 000 km.",
-    status: "verified",
+    oil_change_notes: 'محرك بتقنية التيربو عالي الكفاءة، يتطلب زيت تخليقي كامل 100%.',
+    status: 'verified',
   },
 ];
 
 export function VehicleModelDetailPage() {
   const { id } = useParams();
-  const models = useSupabaseTable<VehicleModelRow>("vehicle_models", fallbackModels).map(normalizeVehicleModel);
-  const model = models.find((entry) => entry.id === id) ?? fallbackModels.find((entry) => entry.id === id) ?? fallbackModels[0];
+  const { language, theme } = useUiStore();
+  const isDark = theme === 'dark';
+  const isArabic = language === 'ar';
 
-  const filters = coerceArray(model.compatible_filter_refs).join(", ") || "Non renseign�";
+  const models = useSupabaseTable<VehicleModelRow>('vehicle_models', fallbackModels);
+  const model =
+    models.find((m) => m.id === id || m.model_name?.toLowerCase().includes(String(id).toLowerCase())) ??
+    fallbackModels.find((m) => m.id === id) ??
+    fallbackModels[0];
+
+  const cardSurface = isDark ? 'border-slate-800 bg-slate-900/90' : 'border-slate-200 bg-white shadow-sm';
+  const subCard = isDark ? 'border-slate-800 bg-slate-950/70' : 'border-slate-200 bg-slate-50';
+  const baseText = isDark ? 'text-white' : 'text-slate-900';
+  const mutedText = isDark ? 'text-slate-400' : 'text-slate-500';
+
+  const filters = Array.isArray(model.compatible_filter_refs)
+    ? model.compatible_filter_refs.join(', ')
+    : typeof model.compatible_filter_refs === 'string'
+    ? model.compatible_filter_refs
+    : 'MANN-HU719/7x';
 
   return (
     <div className="space-y-6">
-      <Link
-        to="/vehicles"
-        className="inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-700 hover:text-white"
-      >
-        <ArrowLeft size={16} />
-        Retour aux mod�les
-      </Link>
+      {/* Back button */}
+      <div>
+        <Link
+          to="/vehicles"
+          className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition ${
+            isDark
+              ? 'border-slate-800 bg-slate-900 text-slate-200 hover:border-slate-700 hover:bg-slate-800'
+              : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+          }`}
+        >
+          {isArabic ? <ArrowRight size={15} /> : <ArrowLeft size={15} />}
+          <span>{isArabic ? 'العودة لسجل المركبات' : 'Retour aux véhicules'}</span>
+        </Link>
+      </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      {/* Main Reference Header */}
+      <div className={`rounded-2xl border p-5 sm:p-6 ${cardSurface}`}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.2em] text-amber-400">R�f�rence moteur</p>
-            <h2 className="mt-2 text-3xl font-bold text-white">
-              {model.model_name ?? "Mod�le inconnu"}
+            <div className="flex items-center gap-2 text-amber-500">
+              <Sparkles size={16} />
+              <span className="text-xs font-bold uppercase tracking-wider">
+                {isArabic ? 'المواصفات الفنية المعتمدة للمحرك' : 'Fiche Technique Constructeur'}
+              </span>
+            </div>
+            <h2 className={`mt-2 text-2xl font-black sm:text-3xl ${baseText}`}>
+              {model.model_name || 'Modèle'}
             </h2>
-            <p className="mt-2 text-slate-400">{model.generation ?? "G�n�ration inconnue"}</p>
+            <p className="mt-1 text-xs text-slate-400">{model.generation}</p>
           </div>
-          <span className="inline-flex rounded-full bg-amber-500/15 px-3 py-1 text-xs font-medium uppercase tracking-wide text-amber-300">
-            {model.status ?? "verified"}
+
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-400">
+            <ShieldCheck size={14} />
+            <span>{isArabic ? 'مواصفة مؤكدة' : 'Vérifié OEM'}</span>
           </span>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-            <p className="text-sm text-slate-500">Moteur</p>
-            <p className="mt-2 font-semibold text-white">{model.engine_code ?? "N/A"}</p>
+        {/* Technical Specs Grid */}
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className={`rounded-xl border p-3.5 ${subCard}`}>
+            <span className={`text-[11px] font-semibold ${mutedText}`}>{isArabic ? 'رمز المحرك' : 'Moteur'}</span>
+            <p className={`mt-1 text-sm font-bold ${baseText}`}>{model.engine_code || 'K9K 1.5 dCi'}</p>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-            <p className="text-sm text-slate-500">Carburant</p>
-            <p className="mt-2 font-semibold text-white">{model.fuel_type ?? "N/A"}</p>
+          <div className={`rounded-xl border p-3.5 ${subCard}`}>
+            <span className={`text-[11px] font-semibold ${mutedText}`}>{isArabic ? 'نوع الوقود' : 'Carburant'}</span>
+            <p className={`mt-1 text-sm font-bold ${baseText}`}>{model.fuel_type || 'Diesel'}</p>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-            <p className="text-sm text-slate-500">P�riode</p>
-            <p className="mt-2 font-semibold text-white">
-              {model.year_start ?? "N/A"} - {model.year_end ?? "N/A"}
-            </p>
+          <div className={`rounded-xl border p-3.5 ${subCard}`}>
+            <span className={`text-[11px] font-semibold ${mutedText}`}>{isArabic ? 'سنوات الإنتاج' : 'Années'}</span>
+            <p className={`mt-1 text-sm font-bold ${baseText}`}>{model.year_start} - {model.year_end}</p>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-            <p className="text-sm text-slate-500">Huile</p>
-            <p className="mt-2 font-semibold text-white">
-              {model.oil_capacity_liters ?? "N/A"} L � {model.recommended_viscosity ?? "N/A"}
-            </p>
+          <div className={`rounded-xl border p-3.5 ${subCard}`}>
+            <span className={`text-[11px] font-semibold ${mutedText}`}>{isArabic ? 'سعة الزيت المقدرة' : 'Capacité carter'}</span>
+            <p className="mt-1 text-sm font-bold text-amber-500">{model.oil_capacity_liters} Litres</p>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
-          <div className="mb-4 flex items-center gap-2 text-white">
-            <Droplets size={18} className="text-amber-400" />
-            <h3 className="text-lg font-semibold">Recommandation d�huile</h3>
+      {/* Details Two-Column Cards */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Oil Specifications Card */}
+        <div className={`rounded-2xl border p-5 space-y-3.5 ${cardSurface}`}>
+          <div className="flex items-center gap-2 text-amber-500">
+            <Droplets size={18} />
+            <h3 className={`text-base font-bold ${baseText}`}>
+              {isArabic ? 'توصيات ومواصفات زيت المحرك' : 'Recommandations d’huile'}
+            </h3>
           </div>
 
-          <div className="space-y-3 text-sm text-slate-300">
-            <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
-              <span>Sp�cification</span>
-              <span className="font-medium text-white">{model.recommended_spec ?? "Non renseign�e"}</span>
+          <div className="space-y-2.5 text-xs">
+            <div className={`flex justify-between rounded-xl border p-3 ${subCard}`}>
+              <span className={mutedText}>{isArabic ? 'المعيار / المعايرة المعتمدة:' : 'Norme constructeur:'}</span>
+              <strong className="text-amber-400">{model.recommended_spec}</strong>
             </div>
-            <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
-              <span>Viscosit�</span>
-              <span className="font-medium text-white">{model.recommended_viscosity ?? "N/A"}</span>
+            <div className={`flex justify-between rounded-xl border p-3 ${subCard}`}>
+              <span className={mutedText}>{isArabic ? 'اللزوجة الموصى بها:' : 'Viscosité recommandée:'}</span>
+              <strong className={baseText}>{model.recommended_viscosity}</strong>
             </div>
-            <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
-              <span>Capacit� avec filtre</span>
-              <span className="font-medium text-white">{model.oil_capacity_with_filter ?? model.oil_capacity_liters ?? "N/A"} L</span>
+            <div className={`flex justify-between rounded-xl border p-3 ${subCard}`}>
+              <span className={mutedText}>{isArabic ? 'السعة مع الفلتر الجديد:' : 'Capacité avec filtre:'}</span>
+              <strong className="text-emerald-400">{model.oil_capacity_with_filter || model.oil_capacity_liters} L</strong>
             </div>
-            <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
-              <span>Capacit� sans filtre</span>
-              <span className="font-medium text-white">{model.oil_capacity_without_filter ?? "N/A"} L</span>
+            <div className={`flex justify-between rounded-xl border p-3 ${subCard}`}>
+              <span className={mutedText}>{isArabic ? 'السعة بدون تغيير الفلتر:' : 'Capacité sans filtre:'}</span>
+              <strong className={baseText}>{model.oil_capacity_without_filter || '4.0'} L</strong>
             </div>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
-          <div className="mb-4 flex items-center gap-2 text-white">
-            <Wrench size={18} className="text-amber-400" />
-            <h3 className="text-lg font-semibold">Filtre & intervalle</h3>
+        {/* Maintenance Intervals Card */}
+        <div className={`rounded-2xl border p-5 space-y-3.5 ${cardSurface}`}>
+          <div className="flex items-center gap-2 text-amber-500">
+            <Wrench size={18} />
+            <h3 className={`text-base font-bold ${baseText}`}>
+              {isArabic ? 'الفلاتر وفترات الصيانة الموصى بها' : 'Filtres & Intervalles de vidange'}
+            </h3>
           </div>
 
-          <div className="space-y-3 text-sm text-slate-300">
-            <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
-              <span>R�f�rence filtre</span>
-              <span className="font-medium text-white">{filters}</span>
+          <div className="space-y-2.5 text-xs">
+            <div className={`flex justify-between rounded-xl border p-3 ${subCard}`}>
+              <span className={mutedText}>{isArabic ? 'مراجع الفلاتر المتوافقة:' : 'Réf. Filtres compatibles:'}</span>
+              <strong className="text-amber-400">{filters}</strong>
             </div>
-            <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
-              <span>Intervalle normal</span>
-              <span className="font-medium text-white">{model.recommended_interval_km_normal ?? model.recommended_interval_km ?? "N/A"} km</span>
+            <div className={`flex justify-between rounded-xl border p-3 ${subCard}`}>
+              <span className={mutedText}>{isArabic ? 'الفاصل في الاستخدام العادي:' : 'Intervalle standard:'}</span>
+              <strong className="text-emerald-400">{model.recommended_interval_km_normal || 10000} km</strong>
             </div>
-            <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
-              <span>Intervalle s�v�re</span>
-              <span className="font-medium text-white">{model.recommended_interval_km_severe ?? "N/A"} km</span>
+            <div className={`flex justify-between rounded-xl border p-3 ${subCard}`}>
+              <span className={mutedText}>{isArabic ? 'الفاصل في الاستخدام الشاق / المدن:' : 'Intervalle sévère / Urbain:'}</span>
+              <strong className="text-rose-400">{model.recommended_interval_km_severe || 5000} km</strong>
             </div>
-            <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3">
-              <span>Conduite</span>
-              <span className="font-medium text-white">Ville / route / charge</span>
+            <div className={`flex justify-between rounded-xl border p-3 ${subCard}`}>
+              <span className={mutedText}>{isArabic ? 'تغيير فلتر الزيت:' : 'Remplacement filtre:'}</span>
+              <strong className={baseText}>{isArabic ? 'مع كل غيار زيت إلزامي' : 'À chaque vidange'}</strong>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
-          <div className="mb-4 flex items-center gap-2 text-white">
-            <Gauge size={18} className="text-amber-400" />
-            <h3 className="text-lg font-semibold">Conseils d�entretien</h3>
-          </div>
-          <p className="text-sm leading-7 text-slate-300">
-            {model.oil_change_notes ?? "Aucune note sp�cifique fournie pour ce mod�le. Suivre les recommandations du constructeur et adapter selon le type d�usage."}
-          </p>
+      {/* Expert Workshop Notes */}
+      <div className={`rounded-2xl border p-5 ${cardSurface}`}>
+        <div className="mb-2 flex items-center gap-2 text-amber-500">
+          <Gauge size={18} />
+          <h3 className={`text-base font-bold ${baseText}`}>{isArabic ? 'ملاحظات وتوجيهات الورشة' : 'Conseils techniques'}</h3>
         </div>
-
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
-          <div className="mb-4 flex items-center gap-2 text-white">
-            <Sparkles size={18} className="text-amber-400" />
-            <h3 className="text-lg font-semibold">Points cl�s</h3>
-          </div>
-
-          <ul className="space-y-3 text-sm text-slate-300">
-            <li>� V�rifier l��tat du filtre � huile � chaque vidange.</li>
-            <li>� Contr�ler r�guli�rement le niveau d�huile moteur et le bon fonctionnement du syst�me de refroidissement.</li>
-            <li>� R�duire l�intervalle en conduite urbaine, en charge ou en conditions poussi�reuses.</li>
-          </ul>
-        </div>
+        <p className="text-xs leading-relaxed text-slate-400">
+          {model.oil_change_notes ||
+            (isArabic
+              ? 'احرص دائماً على فحص مستوى الزيت بعد تشغيل المحرك لـ 30 ثانية والتأكد من إحكام إغلاق برغي الكارتير وتغيير الحلقة النحاسية (Joint de vidange).'
+              : 'Vérifiez toujours le niveau après 30s de fonctionnement moteur et remplacez le joint de bouchon de vidange.')}
+        </p>
       </div>
     </div>
   );

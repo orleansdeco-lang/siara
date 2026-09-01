@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowRight,
@@ -35,165 +36,88 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useSupabaseTable } from '../lib/supabase';
 import { useUiStore } from '../store/store';
 
 const dateRanges = {
-  fr: ['Aujourd’hui', 'Hier', 'Cette semaine', 'Ce mois', 'Personnalisé'],
-  ar: ['اليوم', 'أمس', 'هذا الأسبوع', 'هذا الشهر', 'مخصص'],
+  fr: ['Aujourd’hui', 'Hier', 'Cette semaine', 'Ce mois'],
+  ar: ['اليوم', 'أمس', 'هذا الأسبوع', 'هذا الشهر'],
 };
 
-const quickActions = {
-  fr: [
-    { label: 'Nouveau service', icon: ClipboardList },
-    { label: 'Client', icon: Search },
-    { label: 'Véhicule', icon: CarFront },
-    { label: 'Vente', icon: ShoppingCart },
-    { label: 'Dépense', icon: ReceiptText },
-    { label: 'Scanner', icon: Sparkles },
-  ],
-  ar: [
-    { label: 'خدمة جديدة', icon: ClipboardList },
-    { label: 'العميل', icon: Search },
-    { label: 'المركبة', icon: CarFront },
-    { label: 'بيع', icon: ShoppingCart },
-    { label: 'مصروف', icon: ReceiptText },
-    { label: 'الماسح', icon: Sparkles },
-  ],
-};
-
-const workshopStatus = {
-  fr: [
-    { bay: 'Poste 1', status: 'En cours', vehicle: 'BMW X5', eta: '12:30' },
-    { bay: 'Poste 2', status: 'En attente', vehicle: 'Renault Clio', eta: '13:00' },
-    { bay: 'Poste 3', status: 'Prêt', vehicle: 'Mercedes C-Class', eta: '14:15' },
-    { bay: 'Poste 4', status: 'Inspection', vehicle: 'Toyota Corolla', eta: '15:45' },
-  ],
-  ar: [
-    { bay: 'المنصّة 1', status: 'قيد التنفيذ', vehicle: 'BMW X5', eta: '12:30' },
-    { bay: 'المنصّة 2', status: 'في الانتظار', vehicle: 'Renault Clio', eta: '13:00' },
-    { bay: 'المنصّة 3', status: 'جاهز', vehicle: 'Mercedes C-Class', eta: '14:15' },
-    { bay: 'المنصّة 4', status: 'فحص', vehicle: 'Toyota Corolla', eta: '15:45' },
-  ],
-};
-
-const serviceRows = [
-  { id: 'SV-1048', vehicle: 'BMW X5', owner: 'Karim D.', oil: '5W-30', total: 'DA 124,000', status: 'In progress' },
-  { id: 'SV-1049', vehicle: 'Mercedes C-Class', owner: 'Nadia B.', oil: '5W-40', total: 'DA 98,000', status: 'Ready' },
-  { id: 'SV-1050', vehicle: 'Audi A3', owner: 'Leila M.', oil: '5W-30', total: 'DA 76,000', status: 'Done' },
-  { id: 'SV-1051', vehicle: 'Toyota Corolla', owner: 'Samir H.', oil: '5W-40', total: 'DA 68,000', status: 'Waiting' },
+const defaultServices = [
+  { id: 'SV-1048', vehicle_model: 'BMW X5', customer_name: 'Karim D.', oil_type: '5W-30', total_amount: 12400, payment_status: 'payé' },
+  { id: 'SV-1049', vehicle_model: 'Mercedes C-Class', customer_name: 'Nadia B.', oil_type: '5W-40', total_amount: 9800, payment_status: 'payé' },
+  { id: 'SV-1050', vehicle_model: 'Audi A3', customer_name: 'Leila M.', oil_type: '5W-30', total_amount: 7600, payment_status: 'payé' },
+  { id: 'SV-1051', vehicle_model: 'Toyota Corolla', customer_name: 'Samir H.', oil_type: '5W-40', total_amount: 6800, payment_status: 'dette' },
 ];
 
 const revenueTrend = [
-  { name: 'Lun', revenue: 42 },
-  { name: 'Mar', revenue: 38 },
-  { name: 'Mer', revenue: 58 },
-  { name: 'Jeu', revenue: 45 },
-  { name: 'Ven', revenue: 70 },
-  { name: 'Sam', revenue: 66 },
-  { name: 'Dim', revenue: 81 },
+  { name: 'Lun / الإثنين', revenue: 42000 },
+  { name: 'Mar / الثلاثاء', revenue: 38000 },
+  { name: 'Mer / الأربعاء', revenue: 58000 },
+  { name: 'Jeu / الخميس', revenue: 45000 },
+  { name: 'Ven / الجمعة', revenue: 70000 },
+  { name: 'Sam / السبت', revenue: 66000 },
+  { name: 'Dim / الأحد', revenue: 81000 },
 ];
 
 const productMix = {
   fr: [
-    { name: 'Huile', value: 48 },
+    { name: 'Huile moteur', value: 48 },
     { name: 'Filtres', value: 25 },
-    { name: 'Fluides', value: 15 },
+    { name: 'Fluides & Frein', value: 15 },
     { name: 'Accessoires', value: 12 },
   ],
   ar: [
-    { name: 'الزيت', value: 48 },
-    { name: 'الفلتر', value: 25 },
-    { name: 'السوائل', value: 15 },
-    { name: 'الإكسسوارات', value: 12 },
+    { name: 'زيوت المحرك', value: 48 },
+    { name: 'الفلاتر بأنواعها', value: 25 },
+    { name: 'سوائل الفرامل والتبريد', value: 15 },
+    { name: 'قطع ومستلزمات', value: 12 },
   ],
 };
 
-const debtRows = [
-  { customer: 'Farid T.', amount: 'DA 62,000', due: '5 jours' },
-  { customer: 'Lina K.', amount: 'DA 41,500', due: '9 jours' },
-  { customer: 'Yacine R.', amount: 'DA 28,300', due: '12 jours' },
-];
-
-const supplierDebtRows = [
-  { supplier: 'ACM Lubricants', amount: 'DA 176,000', due: '6 jours' },
-  { supplier: 'AutoParts DZ', amount: 'DA 92,400', due: '11 jours' },
-  { supplier: 'Bays Motion', amount: 'DA 58,100', due: '4 jours' },
-];
-
-const stockAlerts = [
-  { item: 'Huile 5W-30', qty: '12 fûts', level: 'Stock faible' },
-  { item: 'Filtre à huile MANN-HU719/7x', qty: '3 packs', level: 'Rupture' },
-  { item: 'Liquide de frein', qty: '5 bouteilles', level: 'Stock faible' },
+const defaultReviews = [
+  { customer_name: 'Amine K.', rating: 5, comment: 'خدمة سريعة واحترافية جداً، دقة في المواعيد وشفافية في الأسعار.' },
+  { customer_name: 'Sarah L.', rating: 5, comment: 'Très bon suivi de mon véhicule, équipe accueillante et travail soigné.' },
+  { customer_name: 'Rachid B.', rating: 4, comment: 'Service rapide et bon conseil sur le choix de l’huile moteur.' },
 ];
 
 const barrelMonitoring = [
-  { name: '5W-30', current: 28, max: 40 },
-  { name: '5W-40', current: 18, max: 35 },
-  { name: '10W-40', current: 12, max: 28 },
-  { name: 'Huile de boîte', current: 8, max: 22 },
+  { name: 'Huile 5W-30 (Synthétique)', current: 28, max: 40 },
+  { name: 'Huile 5W-40 (Semi-synthèse)', current: 18, max: 35 },
+  { name: 'Huile 10W-40 (Standard)', current: 12, max: 28 },
+  { name: 'Huile de boîte (Transmission)', current: 8, max: 20 },
 ];
 
-const maintenanceReminders = [
-  { vehicle: 'Renault Clio', due: 'Dans 3 jours', service: 'Huile + filtre' },
-  { vehicle: 'Peugeot 308', due: 'Dans 7 jours', service: 'Contrôle des freins' },
-  { vehicle: 'Toyota Yaris', due: 'Dans 10 jours', service: 'Service refroidissement' },
-];
-
-const documentAlerts = [
-  { doc: 'Renouvellement assurance', due: '12 jours' },
-  { doc: 'Permis élimination huile usagée', due: '3 jours' },
-  { doc: 'Certificat TVA', due: '28 jours' },
-];
-
-const employeeRows = [
-  { name: 'Amina N.', role: 'Chef d’atelier', performance: 96, commission: 'DA 28,500' },
-  { name: 'Youssef R.', role: 'Technicien', performance: 91, commission: 'DA 24,000' },
-  { name: 'Sonia D.', role: 'Ventes', performance: 88, commission: 'DA 19,800' },
-  { name: 'Hakim M.', role: 'Support atelier', performance: 84, commission: 'DA 15,200' },
-];
-
-const topProducts = [
-  { name: 'Huile moteur 5W-30', sold: 186 },
-  { name: 'Filtres à huile', sold: 126 },
-  { name: 'Liquide de frein', sold: 94 },
-  { name: 'Pré-mix refroidissement', sold: 71 },
-];
-
-const reviews = [
-  { customer: 'Amine K.', rating: 5, comment: 'Très professionnel, délai rapide et prix transparent.' },
-  { customer: 'Sarah L.', rating: 5, comment: 'Excellent suivi sur mon véhicule et communication claire.' },
-  { customer: 'Rachid B.', rating: 4, comment: 'Bon service, livraison rapide et suivi après-vente correct.' },
-];
-
-const criticalAlerts = [
-  { level: 'Critique', label: 'Caisse sous le seuil attendu', detail: 'DA 118,000 vs cible DA 180,000' },
-  { level: 'Alerte', label: 'Deux huiles en stock faible', detail: '5W-30 et 10W-40 à reconstituer' },
-  { level: 'Alerte', label: '3 documents à expiration', detail: 'Renouveler avant fin de semaine' },
-];
-
-const closingSummary = [
-  { label: 'Clôture attendue', value: 'DA 1,240,000' },
-  { label: 'Marge cible', value: '32.8%' },
-  { label: 'Risque cash', value: 'Faible' },
-];
-
-const pieColors = ['#f59e0b', '#fbbf24', '#fcd34d', '#fef3c7'];
+const pieColors = ['#f59e0b', '#fbbf24', '#fcd34d', '#fed7aa'];
 
 export function OverviewPage() {
+  const navigate = useNavigate();
   const { language, theme } = useUiStore();
   const isDark = theme === 'dark';
   const isArabic = language === 'ar';
+
   const [selectedRange, setSelectedRange] = useState(isArabic ? 'اليوم' : 'Aujourd’hui');
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [now, setNow] = useState(new Date());
+
+  // Supabase Table hooks
+  const liveServices = useSupabaseTable<any>('services', defaultServices, '*', [], 'created_at.desc');
+  const liveReviews = useSupabaseTable<any>('reviews', defaultReviews, '*', [], 'created_at.desc');
+
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: isArabic ? 'صباح الخير. الإيرادات ترتفع بنسبة 18.4% هذا الأسبوع، ومخزون الزيت مستقر.' : 'Good morning. Revenue is up 18.4% this week, and the oil inventory is stable.' },
+    {
+      role: 'assistant',
+      text: isArabic
+        ? 'مرحباً بك! نظام SIARA الذكي جاهز. الإيرادات ممتازة هذا الأسبوع والمخزون تحت المتابعة.'
+        : 'Bonjour ! Le système SIARA est actif. Vos revenus sont en hausse de 18% cette semaine.',
+    },
   ]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(timer);
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -202,94 +126,103 @@ export function OverviewPage() {
 
   const formattedDate = useMemo(
     () =>
-      new Intl.DateTimeFormat(isArabic ? 'ar-DZ' : 'fr-FR', {
-        weekday: 'short',
-        day: '2-digit',
-        month: 'short',
+      new Intl.DateTimeFormat(isArabic ? 'ar-DZ' : 'fr-DZ', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
         year: 'numeric',
       }).format(now),
-    [isArabic, now],
+    [isArabic, now]
   );
 
   const formattedTime = useMemo(
     () =>
-      new Intl.DateTimeFormat(isArabic ? 'ar-DZ' : 'fr-FR', {
+      new Intl.DateTimeFormat(isArabic ? 'ar-DZ' : 'fr-DZ', {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
         hour12: false,
       }).format(now),
-    [isArabic, now],
+    [isArabic, now]
   );
 
+  const formatPrice = (val: number) => `DA ${new Intl.NumberFormat('fr-DZ').format(val)}`;
+
   const kpis = [
-    { label: isArabic ? 'الإيرادات' : 'Revenue', value: 'DA 1,240,000', delta: '+18.4%', trend: 'up', icon: CircleDollarSign },
-    { label: isArabic ? 'المصروفات' : 'Expenses', value: 'DA 425,000', delta: '-6.1%', trend: 'down', icon: Wallet },
-    { label: isArabic ? 'الربح' : 'Profit', value: 'DA 815,000', delta: '+12.8%', trend: 'up', icon: TrendingUp },
-    { label: isArabic ? 'صندوق النقدية' : 'Cash register', value: 'DA 198,500', delta: '+4.7%', trend: 'up', icon: CreditCard },
+    { label: isArabic ? 'مجموع الإيرادات' : 'Revenu Total', value: 'DA 1,240,000', delta: '+18.4%', trend: 'up', icon: CircleDollarSign },
+    { label: isArabic ? 'المصاريف والسلع' : 'Dépenses & Achats', value: 'DA 425,000', delta: '-6.1%', trend: 'down', icon: Wallet },
+    { label: isArabic ? 'صافي الأرباح' : 'Bénéfice Net', value: 'DA 815,000', delta: '+12.8%', trend: 'up', icon: TrendingUp },
+    { label: isArabic ? 'السيولة بالصندوق' : 'Caisse Actuelle', value: 'DA 198,500', delta: '+4.7%', trend: 'up', icon: CreditCard },
+  ];
+
+  const quickActionsList = [
+    { label: isArabic ? 'تسجيل خدمة جديدة' : 'Nouveau service', icon: ClipboardList, path: '/services/new', color: 'from-amber-500 to-orange-400' },
+    { label: isArabic ? 'دليل العملاء' : 'Clients', icon: Search, path: '/clients', color: 'from-blue-500 to-indigo-500' },
+    { label: isArabic ? 'سجل المركبات' : 'Véhicules', icon: CarFront, path: '/vehicles', color: 'from-emerald-500 to-teal-500' },
+    { label: isArabic ? 'المخزون والقطع' : 'Stock & Pièces', icon: ShoppingCart, path: '/inventory', color: 'from-purple-500 to-pink-500' },
+    { label: isArabic ? 'المالية والصندوق' : 'Finance', icon: ReceiptText, path: '/finance', color: 'from-amber-500 to-yellow-500' },
+    { label: isArabic ? 'آراء الزبائن' : 'Avis QR', icon: Star, path: '/reviews', color: 'from-rose-500 to-red-500' },
   ];
 
   const handleSendAi = () => {
     const text = chatInput.trim();
     if (!text) return;
 
-    setMessages((previous) => [...previous, { role: 'user', text }]);
+    setMessages((prev) => [...prev, { role: 'user', text }]);
     const lower = text.toLowerCase();
 
     let response = isArabic
-      ? 'أستطيع تلخيص حالة الورشة: الإيرادات جيدة، لكن منتجين من الزيوت يحتاجان لإعادة التوريد وثلاثة مستندات على وشك الانتهاء.'
-      : 'I can summarize the workshop status: revenue is healthy, but two oil SKUs need restocking and three documents are expiring soon.';
+      ? 'حالة الورشة ممتازة: العمليات تسير بشكل منتظم، ويوجد 4 خدمات مسجلة اليوم.'
+      : 'Statut de l’atelier : Tout fonctionne normalement avec 4 services enregistrés aujourd’hui.';
 
-    if (lower.includes('stock') || lower.includes('inventory') || lower.includes('مخزون') || lower.includes('زيت')) {
+    if (lower.includes('stock') || lower.includes('مخزون') || lower.includes('زيت') || lower.includes('huile')) {
       response = isArabic
-        ? 'مخزون الزيوت أقل من الهدف: 5W-30 عند 28% و10W-40 عند 12%. أعد الطلب قبل الجمعة.'
-        : 'Current oil stock is slightly below target: 5W-30 is at 28% capacity and 10W-40 is at 12% capacity. Reorder by Friday.';
-    } else if (lower.includes('revenue') || lower.includes('profit') || lower.includes('إيراد') || lower.includes('ربح')) {
+        ? 'مخزون الزيوت: 5W-30 متبقي منه 28 برميلاً و10W-40 متبقي منه 12 برميلاً. ننصح بطلب شحنة جديدة قبل نهاية الأسبوع.'
+        : 'Stock d’huile : Il reste 28 fûts de 5W-30 et 12 fûts de 10W-40. Prévoyez un réapprovisionnement.';
+    } else if (lower.includes('ربح') || lower.includes('revenue') || lower.includes('إيراد') || lower.includes('دين')) {
       response = isArabic
-        ? 'الإيرادات للفترة المختارة هي DA 1,240,000 مع ربح إجمالي DA 815,000 وهامش 32.8%.'
-        : 'Revenue for the selected period is DA 1,240,000 with a gross profit of DA 815,000 and a 32.8% margin.';
-    } else if (lower.includes('debt') || lower.includes('customer') || lower.includes('دين') || lower.includes('عميل')) {
-      response = isArabic
-        ? 'المديونيات من العملاء تبلغ DA 131,800 ومبالغ الموردين DA 326,500. أكبر فاتورة عميل هي Farid T. بمبلغ DA 62,000.'
-        : 'Customer receivables total DA 131,800 and supplier payables total DA 326,500. The largest customer invoice is Farid T. at DA 62,000.';
+        ? 'الإيرادات اليومية المسجلة بلغت DA 1,240,000 بهامش ربح قدره 32.8%.'
+        : 'Revenus totaux : DA 1 240 000 avec une marge bénéficiaire nette de 32.8%.';
     }
 
-    setMessages((previous) => [...previous, { role: 'assistant', text: response }]);
+    setMessages((prev) => [...prev, { role: 'assistant', text: response }]);
     setChatInput('');
   };
 
-  const cardSurface = isDark ? 'border-slate-800 bg-slate-900/80' : 'border-slate-200 bg-white/90';
-  const subCard = isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-50';
+  const cardSurface = isDark ? 'border-slate-800 bg-slate-900/90' : 'border-slate-200 bg-white shadow-sm';
+  const subCard = isDark ? 'border-slate-800 bg-slate-950/70' : 'border-slate-200 bg-slate-50';
   const baseText = isDark ? 'text-white' : 'text-slate-900';
   const mutedText = isDark ? 'text-slate-400' : 'text-slate-500';
-  const softText = isDark ? 'text-slate-300' : 'text-slate-600';
-  const inputClass = isDark ? 'border-slate-700 bg-slate-950 text-white placeholder:text-slate-500' : 'border-slate-200 bg-white text-slate-800 placeholder:text-slate-400';
 
   return (
     <div className="space-y-6">
+      {/* Top Header Overview */}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-amber-400">{isArabic ? 'لوحة مالك الورشة' : 'Owner dashboard'}</p>
-          <h2 className={`mt-2 text-3xl font-bold ${baseText}`}>{isArabic ? 'نظرة عامة على أداء الورشة' : 'Workshop performance overview'}</h2>
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-amber-500">
+            {isArabic ? 'لوحة القيادة المباشرة' : 'Tableau de bord'}
+          </p>
+          <h2 className={`mt-1 text-2xl font-black sm:text-3xl ${baseText}`}>
+            {isArabic ? 'نظرة عامة على نشاط الورشة' : 'Vue globale de l’atelier'}
+          </h2>
         </div>
 
-        <div className="flex flex-col items-start gap-3 md:flex-row md:items-center">
-          <div className={`rounded-2xl border px-4 py-3 text-sm ${cardSurface} ${softText}`}>
-            <div className={mutedText}>{isArabic ? 'التاريخ الحالي' : 'Current date'}</div>
-            <div className={`mt-1 font-semibold ${baseText}`}>{formattedDate}</div>
-            <div className="text-amber-300">{formattedTime}</div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className={`rounded-2xl border px-4 py-2.5 text-xs font-semibold ${cardSurface}`}>
+            <div className={mutedText}>{isArabic ? 'التوقيت المباشر' : 'Horloge système'}</div>
+            <div className={`mt-0.5 font-bold ${baseText}`}>{formattedDate} • <span className="text-amber-500">{formattedTime}</span></div>
           </div>
 
-          <div className={`flex flex-wrap gap-2 rounded-2xl border p-1.5 ${cardSurface}`}>
-            {(dateRanges[language]).map((range) => (
+          <div className={`flex gap-1.5 rounded-2xl border p-1 ${cardSurface}`}>
+            {dateRanges[language].map((range) => (
               <button
                 key={range}
                 type="button"
                 onClick={() => setSelectedRange(range)}
-                className={`rounded-xl px-3 py-2 text-xs font-medium transition ${
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
                   selectedRange === range
-                    ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
-                    : isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-400 text-slate-950 shadow-sm'
+                    : isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 {range}
@@ -299,34 +232,36 @@ export function OverviewPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
-        {(quickActions[language]).map(({ label, icon: Icon }) => (
+      {/* Quick Action Navigation Buttons */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        {quickActionsList.map(({ label, icon: Icon, path, color }) => (
           <button
-            key={label}
+            key={path}
             type="button"
-            className={`rounded-2xl border p-3 text-left transition ${cardSurface} ${isDark ? 'hover:border-slate-700 hover:bg-slate-900' : 'hover:border-slate-300 hover:bg-slate-50'}`}
+            onClick={() => navigate(path)}
+            className={`group flex flex-col justify-between rounded-2xl border p-4 text-start transition active:scale-95 ${cardSurface} hover:border-amber-500/50 hover:shadow-md`}
           >
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300">
+            <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${color} text-slate-950 shadow-sm`}>
               <Icon size={18} />
             </div>
-            <div className={`text-sm font-medium ${baseText}`}>{label}</div>
+            <span className={`text-xs font-bold transition group-hover:text-amber-500 ${baseText}`}>{label}</span>
           </button>
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {/* KPI Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map(({ label, value, delta, trend, icon: Icon }) => (
-          <div key={label} className={`rounded-2xl border p-5 shadow-lg ${cardSurface} ${isDark ? 'shadow-slate-950/30' : 'shadow-slate-200/60'}`}>
+          <div key={label} className={`rounded-2xl border p-5 ${cardSurface}`}>
             <div className="flex items-center justify-between">
-              <p className={mutedText}>{label}</p>
-              <div className={`rounded-xl p-2 ${isDark ? 'bg-slate-950 text-amber-300' : 'bg-slate-100 text-amber-500'}`}>
-                <Icon size={16} />
+              <span className={`text-xs font-semibold ${mutedText}`}>{label}</span>
+              <div className={`rounded-xl p-2 ${isDark ? 'bg-slate-950 text-amber-400' : 'bg-amber-50 text-amber-600'}`}>
+                <Icon size={18} />
               </div>
             </div>
-
-            <div className="mt-4 flex items-end justify-between gap-3">
-              <span className={`text-3xl font-bold ${baseText}`}>{value}</span>
-              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${trend === 'up' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`}>
+            <div className="mt-4 flex items-baseline justify-between">
+              <span className={`text-2xl font-black ${baseText}`}>{value}</span>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${trend === 'up' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'}`}>
                 {trend === 'up' ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                 {delta}
               </span>
@@ -335,39 +270,47 @@ export function OverviewPage() {
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
+      {/* Main Grid: Services Table & Performance Charts */}
+      <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
         <div className="space-y-6">
+          {/* Recent Services Table */}
           <div className={`rounded-2xl border p-5 ${cardSurface}`}>
-            <div className="mb-5 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ClipboardList size={18} className="text-amber-400" />
-                <h3 className={`text-lg font-semibold ${baseText}`}>{isArabic ? 'خدمات اليوم' : 'Today’s services'}</h3>
+                <ClipboardList size={18} className="text-amber-500" />
+                <h3 className={`text-base font-bold ${baseText}`}>{isArabic ? 'آخر الخدمات المسجلة' : 'Derniers services'}</h3>
               </div>
-              <button type="button" className="text-sm text-amber-300">{isArabic ? 'عرض الكل' : 'View all'}</button>
+              <button
+                type="button"
+                onClick={() => navigate('/services/new')}
+                className="text-xs font-bold text-amber-500 hover:underline"
+              >
+                + {isArabic ? 'خدمة جديدة' : 'Nouveau service'}
+              </button>
             </div>
 
-            <div className={`overflow-hidden rounded-xl border ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-              <table className={`min-w-full divide-y text-left text-sm ${isDark ? 'divide-slate-800 text-slate-200' : 'divide-slate-200 text-slate-700'}`}>
-                <thead className={isDark ? 'bg-slate-950/80 text-slate-400' : 'bg-slate-100 text-slate-500'}>
-                  <tr>
-                    <th className="px-4 py-3 font-medium">{isArabic ? 'رقم الخدمة' : 'Ticket'}</th>
-                    <th className="px-4 py-3 font-medium">{isArabic ? 'المركبة' : 'Vehicle'}</th>
-                    <th className="px-4 py-3 font-medium">{isArabic ? 'المالك' : 'Owner'}</th>
-                    <th className="px-4 py-3 font-medium">{isArabic ? 'الزيت' : 'Oil'}</th>
-                    <th className="px-4 py-3 font-medium">{isArabic ? 'الإجمالي' : 'Total'}</th>
-                    <th className="px-4 py-3 font-medium">{isArabic ? 'الحالة' : 'Status'}</th>
+            <div className="overflow-x-auto">
+              <table className="w-full text-start text-xs sm:text-sm">
+                <thead>
+                  <tr className={`border-b ${isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
+                    <th className="py-2.5 px-3 font-semibold">{isArabic ? 'المركبة' : 'Véhicule'}</th>
+                    <th className="py-2.5 px-3 font-semibold">{isArabic ? 'الزبون' : 'Client'}</th>
+                    <th className="py-2.5 px-3 font-semibold">{isArabic ? 'نوع الزيت' : 'Huile'}</th>
+                    <th className="py-2.5 px-3 font-semibold">{isArabic ? 'المبلغ' : 'Montant'}</th>
+                    <th className="py-2.5 px-3 font-semibold">{isArabic ? 'الحالة' : 'Statut'}</th>
                   </tr>
                 </thead>
-                <tbody className={isDark ? 'divide-y divide-slate-800 bg-slate-900' : 'divide-y divide-slate-200 bg-white'}>
-                  {serviceRows.map((service) => (
-                    <tr key={service.id} className={isDark ? 'text-slate-200' : 'text-slate-700'}>
-                      <td className={`px-4 py-3 font-medium ${baseText}`}>{service.id}</td>
-                      <td className="px-4 py-3">{service.vehicle}</td>
-                      <td className="px-4 py-3">{service.owner}</td>
-                      <td className="px-4 py-3">{service.oil}</td>
-                      <td className="px-4 py-3">{service.total}</td>
-                      <td className="px-4 py-3">
-                        <span className="rounded-full bg-amber-500/15 px-2 py-1 text-[11px] font-medium text-amber-300">{service.status}</span>
+                <tbody className="divide-y divide-slate-800/40">
+                  {liveServices.slice(0, 5).map((s: any, idx: number) => (
+                    <tr key={s.id || idx} className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                      <td className={`py-3 px-3 font-bold ${baseText}`}>{s.vehicle_model || s.vehicle || 'Véhicule'}</td>
+                      <td className="py-3 px-3 text-slate-400">{s.customer_name || s.owner || 'Client'}</td>
+                      <td className="py-3 px-3"><span className="rounded-md bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-400">{s.oil_type || s.oil || '5W-30'}</span></td>
+                      <td className={`py-3 px-3 font-bold ${baseText}`}>{formatPrice(Number(s.total_amount || 7500))}</td>
+                      <td className="py-3 px-3">
+                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold text-emerald-400">
+                          {isArabic ? 'مكتمل' : 'Effectué'}
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -376,200 +319,113 @@ export function OverviewPage() {
             </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className={`rounded-2xl border p-5 ${cardSurface}`}>
-              <div className="mb-5 flex items-center justify-between">
-                <h3 className={`text-lg font-semibold ${baseText}`}>{isArabic ? 'أداء الأعمال' : 'Business performance'}</h3>
-                <span className="text-sm text-emerald-300">+24.6%</span>
+          {/* Revenue Area Chart */}
+          <div className={`rounded-2xl border p-5 ${cardSurface}`}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className={`text-base font-bold ${baseText}`}>{isArabic ? 'منحنى نمو الإيرادات الأسبوعي' : 'Évolution du revenu hebdomadaire'}</h3>
+                <p className="text-xs text-slate-400">{isArabic ? 'مقارنة إيرادات الأيام السبعة الأخيرة' : 'Revenu net par jour'}</p>
               </div>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={revenueTrend}>
-                    <defs>
-                      <linearGradient id="revenueFill" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.7} />
-                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.05} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke={isDark ? '#334155' : '#cbd5e1'} strokeDasharray="4 4" vertical={false} />
-                    <XAxis dataKey="name" stroke={isDark ? '#94a3b8' : '#475569'} />
-                    <YAxis stroke={isDark ? '#94a3b8' : '#475569'} />
-                    <Tooltip contentStyle={{ background: isDark ? '#0f172a' : '#ffffff', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, borderRadius: 12 }} />
-                    <Area type="monotone" dataKey="revenue" stroke="#f59e0b" fill="url(#revenueFill)" strokeWidth={3} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-bold text-emerald-400">+24.6%</span>
             </div>
-
-            <div className={`rounded-2xl border p-5 ${cardSurface}`}>
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className={`text-lg font-semibold ${baseText}`}>{isArabic ? 'أفضل المنتجات' : 'Top products'}</h3>
-                <span className={mutedText}>{isArabic ? 'هذا الشهر' : 'This month'}</span>
-              </div>
-              <div className="space-y-4">
-                {topProducts.map((product) => (
-                  <div key={product.name}>
-                    <div className={`mb-1 flex items-center justify-between text-sm ${softText}`}>
-                      <span>{product.name}</span>
-                      <span>{product.sold}</span>
-                    </div>
-                    <div className={`h-2 overflow-hidden rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
-                      <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400" style={{ width: `${Math.max(35, product.sold / 2)}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className={`rounded-2xl border p-5 ${cardSurface}`}>
-              <div className="mb-4 flex items-center gap-2">
-                <Star size={18} className="text-amber-400" />
-                <h3 className={`text-lg font-semibold ${baseText}`}>{isArabic ? 'التقييمات' : 'Reviews'}</h3>
-              </div>
-              <div className="space-y-4">
-                {reviews.map((review) => (
-                  <div key={review.customer} className={`rounded-xl border p-3 ${subCard}`}>
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className={`font-medium ${baseText}`}>{review.customer}</span>
-                      <span className="flex items-center gap-1 text-amber-300">
-                        {Array.from({ length: review.rating }, (_, index) => (
-                          <Star key={`${review.customer}-${index}`} size={12} fill="currentColor" />
-                        ))}
-                      </span>
-                    </div>
-                    <p className={`text-sm ${softText}`}>{review.comment}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className={`rounded-2xl border p-5 ${cardSurface}`}>
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className={`text-lg font-semibold ${baseText}`}>{isArabic ? 'مزيج المنتجات' : 'Product mix'}</h3>
-                <span className={mutedText}>{isArabic ? 'الحصة' : 'Share'}</span>
-              </div>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={productMix[language]} dataKey="value" nameKey="name" innerRadius={42} outerRadius={78} paddingAngle={4}>
-                      {productMix[language].map((entry, index) => (
-                        <Cell key={entry.name} fill={pieColors[index % pieColors.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={{ background: isDark ? '#0f172a' : '#ffffff', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, borderRadius: 12 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-2">
-                {productMix[language].map((item, index) => (
-                  <div key={item.name} className={`flex items-center justify-between text-sm ${softText}`}>
-                    <div className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: pieColors[index % pieColors.length] }} />
-                      {item.name}
-                    </div>
-                    <span>{item.value}%</span>
-                  </div>
-                ))}
-              </div>
+            <div className="h-60">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={revenueTrend}>
+                  <defs>
+                    <linearGradient id="revenueFill" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.6} />
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke={isDark ? '#334155' : '#e2e8f0'} strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" stroke={isDark ? '#94a3b8' : '#64748b'} textAnchor="middle" tick={{ fontSize: 11 }} />
+                  <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} tick={{ fontSize: 11 }} />
+                  <Tooltip contentStyle={{ background: isDark ? '#0f172a' : '#ffffff', border: '1px solid #f59e0b', borderRadius: 12 }} />
+                  <Area type="monotone" dataKey="revenue" stroke="#f59e0b" fill="url(#revenueFill)" strokeWidth={3} />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
 
+        {/* Right Column: Oil Monitoring & Reviews */}
         <div className="space-y-6">
+          {/* Bulk Oil Barrels Monitoring */}
           <div className={`rounded-2xl border p-5 ${cardSurface}`}>
-            <div className="mb-4 flex items-center gap-2">
-              <CalendarRange size={18} className="text-amber-400" />
-              <h3 className={`text-lg font-semibold ${baseText}`}>{isArabic ? 'حالة الورشة' : 'Workshop status'}</h3>
+            <div className="mb-4 flex items-center gap-2 text-amber-500">
+              <Droplets size={18} />
+              <h3 className={`text-base font-bold ${baseText}`}>{isArabic ? 'مراقبة براميل الزيوت' : 'Niveau des fûts d’huile'}</h3>
             </div>
-            <div className="space-y-3">
-              {(workshopStatus[language]).map((item) => (
-                <div key={item.bay} className={`rounded-xl border p-3 ${subCard}`}>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className={`font-medium ${baseText}`}>{item.bay}</span>
-                    <span className="rounded-full bg-amber-500/15 px-2 py-1 text-[10px] uppercase text-amber-300">{item.status}</span>
-                  </div>
-                  <div className={`mt-2 text-sm ${softText}`}>{isArabic ? 'المركبة:' : 'Vehicle:'} {item.vehicle}</div>
-                  <div className={`mt-1 text-xs ${mutedText}`}>ETA: {item.eta}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className={`rounded-2xl border p-5 ${cardSurface}`}>
-            <div className="mb-4 flex items-center gap-2">
-              <Wallet size={18} className="text-amber-400" />
-              <h3 className={`text-lg font-semibold ${baseText}`}>{isArabic ? 'المديونيات' : 'Debts'}</h3>
-            </div>
-            <div className="space-y-5">
-              <div>
-                <div className={`mb-2 text-xs uppercase tracking-[0.2em] ${mutedText}`}>{isArabic ? 'ديون العملاء' : 'Customer debt'}</div>
-                <div className="space-y-2">
-                  {debtRows.map((item) => (
-                    <div key={item.customer} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${subCard}`}>
-                      <span className={baseText}>{item.customer}</span>
-                      <div className="text-right">
-                        <div className={baseText}>{item.amount}</div>
-                        <div className={mutedText}>{item.due}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <div className={`mb-2 text-xs uppercase tracking-[0.2em] ${mutedText}`}>{isArabic ? 'ديون الموردين' : 'Supplier debt'}</div>
-                <div className="space-y-2">
-                  {supplierDebtRows.map((item) => (
-                    <div key={item.supplier} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${subCard}`}>
-                      <span className={baseText}>{item.supplier}</span>
-                      <div className="text-right">
-                        <div className={baseText}>{item.amount}</div>
-                        <div className={mutedText}>{item.due}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className={`rounded-2xl border p-5 ${cardSurface}`}>
-            <div className="mb-4 flex items-center gap-2">
-              <PackageSearch size={18} className="text-amber-400" />
-              <h3 className={`text-lg font-semibold ${baseText}`}>{isArabic ? 'تنبيهات المخزون' : 'Inventory alerts'}</h3>
-            </div>
-            <div className="space-y-3">
-              {stockAlerts.map((item) => (
-                <div key={item.item} className={`flex items-center justify-between rounded-xl p-3 text-sm ${subCard}`}>
-                  <div>
-                    <div className={`font-medium ${baseText}`}>{item.item}</div>
-                    <div className={mutedText}>{item.qty}</div>
-                  </div>
-                  <span className={item.level.includes('Rupture') || item.level.includes('Out of stock') ? 'rounded-full bg-red-500/15 px-2 py-1 text-xs text-red-300' : 'rounded-full bg-amber-500/15 px-2 py-1 text-xs text-amber-300'}>
-                    {item.level}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className={`rounded-2xl border p-5 ${cardSurface}`}>
-            <div className="mb-4 flex items-center gap-2">
-              <Droplets size={18} className="text-amber-400" />
-              <h3 className={`text-lg font-semibold ${baseText}`}>{isArabic ? 'مراقبة الزيوت بالجملة' : 'Bulk oil monitoring'}</h3>
-            </div>
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               {barrelMonitoring.map((item) => (
-                <div key={item.name}>
-                  <div className={`mb-1 flex items-center justify-between text-sm ${softText}`}>
+                <div key={item.name} className={`rounded-xl border p-3 ${subCard}`}>
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className={baseText}>{item.name}</span>
+                    <span className="text-amber-400">{item.current} / {item.max} {isArabic ? 'برميل' : 'fûts'}</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400"
+                      style={{ width: `${(item.current / item.max) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Product Mix Pie Chart */}
+          <div className={`rounded-2xl border p-5 ${cardSurface}`}>
+            <h3 className={`mb-3 text-base font-bold ${baseText}`}>{isArabic ? 'نسبة المبيعات حسب الصنف' : 'Mix des ventes'}</h3>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={productMix[language]} dataKey="value" nameKey="name" innerRadius={40} outerRadius={68} paddingAngle={4}>
+                    {productMix[language].map((entry, index) => (
+                      <Cell key={entry.name} fill={pieColors[index % pieColors.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: isDark ? '#0f172a' : '#ffffff', border: '1px solid #f59e0b', borderRadius: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-1.5 text-xs text-slate-400">
+              {productMix[language].map((item, idx) => (
+                <div key={item.name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: pieColors[idx % pieColors.length] }} />
                     <span>{item.name}</span>
-                    <span>{item.current}/{item.max}</span>
                   </div>
-                  <div className={`h-2.5 overflow-hidden rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
-                    <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-amber-400" style={{ width: `${(item.current / item.max) * 100}%` }} />
+                  <strong className={baseText}>{item.value}%</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Customer Reviews Preview */}
+          <div className={`rounded-2xl border p-5 ${cardSurface}`}>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-amber-500">
+                <Star size={18} />
+                <h3 className={`text-base font-bold ${baseText}`}>{isArabic ? 'آخر تقييمات الزبائن' : 'Avis récents'}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/reviews')}
+                className="text-xs font-bold text-amber-500 hover:underline"
+              >
+                {isArabic ? 'عرض الكل' : 'Voir tout'}
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {liveReviews.slice(0, 2).map((rev: any, i: number) => (
+                <div key={rev.id || i} className={`rounded-xl border p-3 text-xs ${subCard}`}>
+                  <div className="flex items-center justify-between font-bold">
+                    <span className={baseText}>{rev.customer_name || 'Client'}</span>
+                    <span className="text-amber-400">{'★'.repeat(Number(rev.rating || 5))}</span>
                   </div>
+                  <p className="mt-1.5 text-slate-400">{rev.comment}</p>
                 </div>
               ))}
             </div>
@@ -577,134 +433,39 @@ export function OverviewPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_1fr_1fr]">
-        <div className={`rounded-2xl border p-5 ${cardSurface}`}>
-          <div className="mb-4 flex items-center gap-2">
-            <Wrench size={18} className="text-amber-400" />
-            <h3 className={`text-lg font-semibold ${baseText}`}>{isArabic ? 'تذكيرات الصيانة' : 'Maintenance reminders'}</h3>
-          </div>
-          <div className="space-y-3">
-            {maintenanceReminders.map((item) => (
-              <div key={item.vehicle} className={`rounded-xl p-3 ${subCard}`}>
-                <div className={`font-medium ${baseText}`}>{item.vehicle}</div>
-                <div className={`mt-1 text-sm ${softText}`}>{item.service}</div>
-                <div className="mt-1 text-xs text-amber-300">{item.due}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className={`rounded-2xl border p-5 ${cardSurface}`}>
-          <div className="mb-4 flex items-center gap-2">
-            <FileWarning size={18} className="text-amber-400" />
-            <h3 className={`text-lg font-semibold ${baseText}`}>{isArabic ? 'انتهاء المستندات' : 'Document expiry'}</h3>
-          </div>
-          <div className="space-y-3">
-            {documentAlerts.map((item) => (
-              <div key={item.doc} className={`flex items-center justify-between rounded-xl p-3 text-sm ${subCard}`}>
-                <span className={baseText}>{item.doc}</span>
-                <span className="text-amber-300">{item.due}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className={`rounded-2xl border p-5 ${cardSurface}`}>
-          <div className="mb-4 flex items-center gap-2">
-            <TrendingUp size={18} className="text-amber-400" />
-            <h3 className={`text-lg font-semibold ${baseText}`}>{isArabic ? 'أداء الموظفين' : 'Employee performance'}</h3>
-          </div>
-          <div className="space-y-3">
-            {employeeRows.map((employee) => (
-              <div key={employee.name} className={`rounded-xl p-3 ${subCard}`}>
-                <div className="flex items-center justify-between">
-                  <span className={`font-medium ${baseText}`}>{employee.name}</span>
-                  <span className="text-sm text-emerald-300">{employee.commission}</span>
-                </div>
-                <div className={`mt-1 text-xs ${mutedText}`}>{employee.role}</div>
-                <div className={`mt-2 h-2 overflow-hidden rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
-                  <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400" style={{ width: `${employee.performance}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className={`rounded-2xl border p-5 ${cardSurface}`}>
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShieldAlert size={18} className="text-amber-400" />
-              <h3 className={`text-lg font-semibold ${baseText}`}>{isArabic ? 'تنبيهات حرجة وتحذيرية' : 'Critical & warning alerts'}</h3>
-            </div>
-            <button type="button" className="text-sm text-amber-300">{isArabic ? 'إدارة' : 'Manage'}</button>
-          </div>
-          <div className="space-y-3">
-            {criticalAlerts.map((alert) => (
-              <div key={alert.label} className={`rounded-xl border p-3 ${alert.level === 'Critique' || alert.level === 'Critical' ? 'border-red-500/40 bg-red-500/10' : 'border-amber-500/40 bg-amber-500/10'}`}>
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs font-semibold uppercase ${alert.level === 'Critique' || alert.level === 'Critical' ? 'text-red-300' : 'text-amber-300'}`}>{alert.level}</span>
-                  <AlertTriangle size={14} className={alert.level === 'Critique' || alert.level === 'Critical' ? 'text-red-300' : 'text-amber-300'} />
-                </div>
-                <div className={`mt-2 font-medium ${baseText}`}>{alert.label}</div>
-                <div className={`mt-1 text-sm ${softText}`}>{alert.detail}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className={`rounded-2xl border p-5 ${cardSurface}`}>
-          <div className="mb-4 flex items-center gap-2">
-            <CreditCard size={18} className="text-amber-400" />
-            <h3 className={`text-lg font-semibold ${baseText}`}>{isArabic ? 'ملخص الإغلاق اليومي' : 'End-of-day closing summary'}</h3>
-          </div>
-          <div className="space-y-3">
-            {closingSummary.map((item) => (
-              <div key={item.label} className={`flex items-center justify-between rounded-xl p-3 text-sm ${subCard}`}>
-                <span className={softText}>{item.label}</span>
-                <span className={`font-semibold ${baseText}`}>{item.value}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-            <div className="flex items-center justify-between text-emerald-300">
-              <span className="text-sm font-medium">{isArabic ? 'الموضع النهائي' : 'Final position'}</span>
-              <TrendingUp size={16} />
-            </div>
-            <div className={`mt-2 text-2xl font-bold ${baseText}`}>DA 815,000</div>
-            <div className="mt-1 text-sm text-emerald-200">{isArabic ? 'ربح إجمالي للفترة المحددة' : 'Gross profit for selected range'}</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="fixed bottom-6 right-6 z-50">
+      {/* Floating AI Assistant Chat Bot */}
+      <div className={`fixed bottom-6 z-50 ${isArabic ? 'left-6' : 'right-6'}`}>
         {isAiOpen && (
-          <div className={`mb-3 w-80 rounded-2xl border p-3 shadow-2xl backdrop-blur ${isDark ? 'border-slate-700 bg-slate-900/95 shadow-slate-950/50' : 'border-slate-200 bg-white/95 shadow-slate-200/60'}`}>
-            <div className="mb-3 flex items-center justify-between">
-              <div className={`flex items-center gap-2 ${baseText}`}>
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300">
-                  <Bot size={16} />
-                </div>
-                <span className="font-medium">SIARA AI</span>
+          <div
+            className={`mb-3 w-80 rounded-2xl border p-4 shadow-2xl backdrop-blur-md ${
+              isDark ? 'border-slate-700 bg-slate-900/95' : 'border-slate-200 bg-white/95'
+            }`}
+          >
+            <div className="mb-3 flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="flex items-center gap-2">
+                <Bot size={18} className="text-amber-400" />
+                <span className={`font-bold text-sm ${baseText}`}>SIARA AI Assistant</span>
               </div>
-              <button type="button" onClick={() => setIsAiOpen(false)} className={isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}>
+              <button
+                type="button"
+                onClick={() => setIsAiOpen(false)}
+                className="text-xs text-slate-400 hover:text-white"
+              >
                 ✕
               </button>
             </div>
 
-            <div className="max-h-56 space-y-2 overflow-y-auto pr-1 text-sm">
-              {messages.map((message, index) => (
+            <div className="max-h-56 space-y-2 overflow-y-auto pr-1 text-xs">
+              {messages.map((m, i) => (
                 <div
-                  key={`${message.role}-${index}`}
-                  className={`rounded-xl px-3 py-2 ${
-                    message.role === 'assistant'
-                      ? isDark ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'
-                      : 'bg-amber-500/15 text-amber-100'
+                  key={i}
+                  className={`rounded-xl p-2.5 ${
+                    m.role === 'assistant'
+                      ? isDark ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-800'
+                      : 'bg-amber-500 text-slate-950 font-semibold'
                   }`}
                 >
-                  {message.text}
+                  {m.text}
                 </div>
               ))}
             </div>
@@ -712,17 +473,19 @@ export function OverviewPage() {
             <div className="mt-3 flex gap-2">
               <input
                 value={chatInput}
-                onChange={(event) => setChatInput(event.target.value)}
-                placeholder={isArabic ? 'اسأل عن الإيرادات أو المخزون...' : 'Ask about revenue or stock...'}
-                className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none ${inputClass}`}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendAi()}
+                placeholder={isArabic ? 'اسأل عن المخزون أو الأرباح...' : 'Posez une question...'}
+                className={`w-full rounded-xl border px-3 py-2 text-xs focus:outline-none ${
+                  isDark ? 'border-slate-700 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-900'
+                }`}
               />
               <button
                 type="button"
                 onClick={handleSendAi}
-                className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 p-2 text-white"
-                aria-label="Send AI chat"
+                className="rounded-xl bg-amber-500 p-2 text-slate-950 font-bold hover:bg-amber-400"
               >
-                <ArrowRight size={16} />
+                <ArrowRight size={15} />
               </button>
             </div>
           </div>
@@ -730,11 +493,11 @@ export function OverviewPage() {
 
         <button
           type="button"
-          onClick={() => setIsAiOpen((value) => !value)}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-amber-500 to-orange-400 text-white shadow-2xl shadow-amber-500/30 transition hover:scale-105"
-          aria-label="Toggle AI assistant"
+          onClick={() => setIsAiOpen(!isAiOpen)}
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-amber-500 to-orange-400 text-slate-950 shadow-xl shadow-amber-500/30 transition hover:scale-105 active:scale-95"
+          aria-label="SIARA AI"
         >
-          <MessageSquareText size={22} />
+          <MessageSquareText size={20} />
         </button>
       </div>
     </div>
