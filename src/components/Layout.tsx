@@ -19,11 +19,11 @@ export function Layout({ children }: LayoutProps) {
 
   const marginClass = isArabic
     ? isExpanded
-      ? 'mr-64 sm:mr-72'
-      : 'mr-20'
+      ? 'mr-0 md:mr-64'
+      : 'mr-0 md:mr-20'
     : isExpanded
-      ? 'ml-64 sm:ml-72'
-      : 'ml-20';
+      ? 'ml-0 md:ml-64'
+      : 'ml-0 md:ml-20';
 
   return (
     <div className={`min-h-screen transition-colors duration-200 ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'}`}>
@@ -33,10 +33,10 @@ export function Layout({ children }: LayoutProps) {
             isDark ? 'border-slate-800 bg-slate-950/85' : 'border-slate-200 bg-white/85'
           }`}
         >
-          <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-6 sm:py-3.5">
             <div className="flex items-center gap-3">
               <div
-                className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
+                className={`hidden h-10 w-10 items-center justify-center rounded-xl border sm:flex ${
                   isDark ? 'border-slate-800 bg-slate-900 text-amber-400' : 'border-slate-200 bg-slate-50 text-amber-600'
                 }`}
               >
@@ -65,7 +65,7 @@ export function Layout({ children }: LayoutProps) {
                 title={isArabic ? 'Changer la langue en Français' : 'تغيير اللغة إلى العربية'}
               >
                 <Languages size={15} className="text-amber-400" />
-                <span>{language === 'fr' ? 'العربية' : 'Français'}</span>
+                <span className="hidden sm:inline">{language === 'fr' ? 'العربية' : 'Français'}</span>
               </button>
 
               {/* Theme Switcher */}
@@ -88,13 +88,13 @@ export function Layout({ children }: LayoutProps) {
                 className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 px-3.5 py-2 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 transition hover:brightness-105 active:scale-95 sm:text-sm"
               >
                 <Plus size={16} />
-                <span>{newServiceLabel}</span>
+                <span className="hidden sm:inline">{newServiceLabel}</span>
               </Link>
             </div>
           </div>
         </header>
 
-        <main className="p-4 sm:p-6">{children}</main>
+        <main className="min-w-0 p-2.5 sm:p-6">{children}</main>
       </div>
     </div>
   );

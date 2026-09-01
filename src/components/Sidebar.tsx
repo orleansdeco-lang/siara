@@ -55,7 +55,7 @@ export function Sidebar() {
           : 'left-0 border-r rtl:border-l-0'
       } ${
         isDark ? 'border-slate-800 bg-slate-900/95 text-slate-200' : 'border-slate-200 bg-white/95 text-slate-800'
-      } ${isExpanded ? 'w-64 sm:w-72' : 'w-20'}`}
+      } ${isExpanded ? 'w-[min(18rem,calc(100vw-1rem))] md:w-64' : 'w-16 md:w-20'}`}
     >
       <div className={`flex items-center justify-between border-b p-4 sm:p-5 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
         <div className="flex items-center gap-3 overflow-hidden">
@@ -80,6 +80,15 @@ export function Sidebar() {
           {isExpanded ? <X size={18} /> : <Menu size={18} />}
         </button>
       </div>
+
+      {isExpanded && (
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          aria-label={isArabic ? 'إغلاق القائمة' : 'Fermer le menu'}
+          className="fixed inset-0 -z-10 bg-slate-950/60 md:hidden"
+        />
+      )}
 
       <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
         {menuItems.map((item) => {

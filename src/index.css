@@ -61,9 +61,23 @@ body.light {
   box-sizing: border-box;
 }
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 button,
 input,
 select,
 textarea {
   font: inherit;
+}
+
+@media (max-width: 639px) {
+  input,
+  select,
+  textarea,
+  button {
+    min-height: 42px;
+  }
 }
