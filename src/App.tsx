@@ -10,6 +10,7 @@ import { CustomerFeedbackPage } from './pages/CustomerFeedbackPage';
 import { FinancePage } from './pages/FinancePage';
 import { InventoryPage } from './pages/InventoryPage';
 import { OverviewPage } from './pages/OverviewPage';
+import { OwnerTeamPage } from './pages/OwnerTeamPage';
 import { ReviewsPage } from './pages/ReviewsPage';
 import { ServicesPage } from './pages/ServicesPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -46,6 +47,7 @@ function App() {
                 <Route path="/inventory" element={<InventoryPage />} />
                 <Route path="/finance" element={<FinancePage />} />
                 <Route path="/team" element={<TeamPage />} />
+                <Route path="/owner/team" element={<OwnerTeamPage />} />
                 <Route path="/reviews" element={<ReviewsPage />} />
                 <Route path="/feedback/:serviceId" element={<CustomerFeedbackPage />} />
                 <Route path="/settings" element={<SettingsPage />} />

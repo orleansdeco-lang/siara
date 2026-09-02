@@ -1,17 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   CheckCircle2,
-  Database,
   Globe,
   Moon,
-  RefreshCw,
   Save,
-  Server,
-  ShieldAlert,
-  Sparkles,
   Sun,
 } from 'lucide-react';
-import { checkSupabaseConnection, supabaseUrl } from '../lib/supabase';
 import { useGarageStore, useUiStore } from '../store/store';
 
 export function SettingsPage() {
@@ -26,32 +20,7 @@ export function SettingsPage() {
   const [garagePhone, setGaragePhone] = useState(phone);
   const [garageCurrency, setGarageCurrency] = useState(currency);
 
-  const [connectionStatus, setConnectionStatus] = useState<{
-    loading: boolean;
-    ok: boolean | null;
-    message: string;
-  }>({
-    loading: false,
-    ok: null,
-    message: isArabic ? 'اضغط لفحص الاتصال بـ Supabase' : 'Cliquez pour tester la connexion',
-  });
-
   const [savedMessage, setSavedMessage] = useState('');
-
-  const testConnection = async () => {
-    setConnectionStatus({ loading: true, ok: null, message: isArabic ? 'جاري الفحص...' : 'Test en cours...' });
-    const result = await checkSupabaseConnection();
-    setConnectionStatus({
-      loading: false,
-      ok: result.ok,
-      message: result.message,
-    });
-  };
-
-  useEffect(() => {
-    testConnection();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleSaveGarage = () => {
     setGarage({
@@ -79,74 +48,8 @@ export function SettingsPage() {
           {isArabic ? 'إعدادات النظام والورشة' : 'Paramètres du système'}
         </p>
         <h2 className={`mt-1 text-2xl font-black sm:text-3xl ${baseText}`}>
-          {isArabic ? 'الإعدادات وقاعدة بيانات Supabase' : 'Configuration & Base de données'}
+          {isArabic ? 'إعدادات الورشة' : 'Paramètres de l’atelier'}
         </h2>
-      </div>
-
-      {/* Supabase Status Card */}
-      <div className={`rounded-2xl border p-5 sm:p-6 space-y-4 ${cardSurface}`}>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-800/60 pb-3.5">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
-              <Database size={20} />
-            </div>
-            <div>
-              <h3 className={`font-bold text-base ${baseText}`}>Supabase PostgreSQL Backend</h3>
-              <p className="text-xs text-slate-400 font-mono">{supabaseUrl}</p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            disabled={connectionStatus.loading}
-            onClick={testConnection}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3.5 py-1.5 text-xs font-bold text-slate-200 hover:bg-slate-700 active:scale-95 disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={connectionStatus.loading ? 'animate-spin' : ''} />
-            <span>{isArabic ? 'فحص الاتصال (Ping)' : 'Tester la connexion'}</span>
-          </button>
-        </div>
-
-        {/* Live Status Output */}
-        <div
-          className={`flex items-start gap-3 rounded-2xl border p-4 text-xs ${
-            connectionStatus.ok
-              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-              : connectionStatus.ok === false
-              ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
-              : subCard
-          }`}
-        >
-          {connectionStatus.ok ? (
-            <CheckCircle2 size={18} className="shrink-0 text-emerald-400" />
-          ) : connectionStatus.ok === false ? (
-            <ShieldAlert size={18} className="shrink-0 text-amber-400" />
-          ) : (
-            <Server size={18} className="shrink-0 text-slate-400" />
-          )}
-          <div className="space-y-1">
-            <div className="font-bold">
-              {connectionStatus.ok
-                ? isArabic ? 'الاتصال نشط بقاعدة بيانات Supabase' : 'Connexion Supabase active'
-                : connectionStatus.ok === false
-                ? isArabic ? 'تنبيه: نمط العمل المحلي (Offline / Demo Mode)' : 'Mode hors ligne / Démo'
-                : isArabic ? 'جاري فحص الاتصال...' : 'Statut inconnu'}
-            </div>
-            <p className="leading-relaxed opacity-90">{connectionStatus.message}</p>
-          </div>
-        </div>
-
-        <div className={`rounded-xl border p-3.5 text-xs text-slate-400 space-y-1 ${subCard}`}>
-          <div className="flex items-center gap-1.5 font-bold text-slate-300">
-            <Sparkles size={14} className="text-amber-400" />
-            <span>{isArabic ? 'ملاحظة تشغيل السيرفر وقاعدة البيانات:' : 'Configuration Supabase :'}</span>
-          </div>
-          <p>
-            {isArabic
-              ? 'يمكنك ربط مفاتيح Supabase الخاصة بك في ملف .env عبر تعيين REACT_APP_SUPABASE_URL و REACT_APP_SUPABASE_ANON_KEY. التطبيق يدعم العمل المزدوج (قاعدة بيانات حية + حفظ محلي تلقائي).'
-              : 'Définissez REACT_APP_SUPABASE_URL et REACT_APP_SUPABASE_ANON_KEY dans votre fichier .env pour activer la synchronisation Cloud complète.'}
-          </p>
-        </div>
       </div>
 
       {/* Garage Profile Settings */}

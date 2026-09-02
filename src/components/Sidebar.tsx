@@ -6,6 +6,7 @@ import {
   DollarSign,
   Droplets,
   Languages,
+  LogOut,
   Menu,
   Moon,
   Package,
@@ -19,6 +20,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useSidebarStore, useUiStore, useUserStore } from '../store/store';
+import { useAuthStore } from '../store/authStore';
 
 const menuItemsByLang = {
   fr: [
@@ -29,6 +31,7 @@ const menuItemsByLang = {
     { label: 'Stock intelligent', icon: Package, path: '/inventory' },
     { label: 'Finance & Caisse', icon: DollarSign, path: '/finance' },
     { label: 'Équipe & العمال', icon: Users2, path: '/team' },
+    { label: 'Gestion des accès', icon: Settings, path: '/owner/team' },
     { label: 'Avis clients (QR)', icon: Star, path: '/reviews' },
   ],
   ar: [
@@ -39,6 +42,7 @@ const menuItemsByLang = {
     { label: 'المخزون الذكي', icon: Package, path: '/inventory' },
     { label: 'المالية والصندوق', icon: DollarSign, path: '/finance' },
     { label: 'فريق العمل والعمولات', icon: Users2, path: '/team' },
+    { label: 'إدارة العمال والصلاحيات', icon: Settings, path: '/owner/team' },
     { label: 'تقييمات الزبائن (QR)', icon: Star, path: '/reviews' },
   ],
 } as const;
@@ -46,11 +50,16 @@ const menuItemsByLang = {
 export function Sidebar() {
   const { isExpanded, toggleSidebar, setExpanded } = useSidebarStore();
   const { language, theme, toggleTheme, setLanguage } = useUiStore();
-  const { name, role, avatar } = useUserStore();
+  const { name, role } = useUserStore();
+  const account = useAuthStore((state) => state.account);
+  const signOut = useAuthStore((state) => state.signOut);
   const location = useLocation();
   const isDark = theme === 'dark';
   const isArabic = language === 'ar';
   const menuItems = menuItemsByLang[language];
+  const accountName = account?.profile?.ownerName || account?.email || name;
+  const accountRole = account?.profile ? 'مالك المحل / Propriétaire' : role;
+  const accountInitials = accountName.slice(0, 2).toUpperCase();
 
   useEffect(() => {
     if (window.innerWidth < 768) setExpanded(false);
@@ -133,11 +142,13 @@ export function Sidebar() {
 
       <div className={`border-t p-3 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
         <div className="flex items-center gap-3">
-          <img src={avatar} alt={name} className="h-9 w-9 rounded-full border border-amber-500/50 object-cover" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-500/50 bg-amber-500/15 text-xs font-bold text-amber-300" aria-label={accountName}>
+            {accountInitials}
+          </div>
           {isExpanded && (
             <div className="min-w-0 flex-1">
-              <p className={`truncate text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{name}</p>
-              <p className={`truncate text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{role}</p>
+              <p className={`truncate text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{accountName}</p>
+              <p className={`truncate text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{accountRole}</p>
             </div>
           )}
         </div>
@@ -184,8 +195,18 @@ export function Sidebar() {
           }`}
         >
           <Settings size={18} className="shrink-0" />
-          {isExpanded && <span className="text-xs font-medium">{isArabic ? 'الإعدادات و Supabase' : 'Paramètres & Supabase'}</span>}
+          {isExpanded && <span className="text-xs font-medium">{isArabic ? 'إعدادات الورشة' : 'Paramètres de l’atelier'}</span>}
         </Link>
+        <button
+          type="button"
+          onClick={signOut}
+          className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+            isDark ? 'text-red-300 hover:bg-red-500/10' : 'text-red-600 hover:bg-red-50'
+          }`}
+        >
+          <LogOut size={18} className="shrink-0" />
+          {isExpanded && <span className="text-xs font-medium">{isArabic ? 'تسجيل الخروج' : 'Déconnexion'}</span>}
+        </button>
       </div>
     </aside>
   );
