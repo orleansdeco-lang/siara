@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { insertSupabaseRow } from '../lib/supabase';
 import { useGarageStore, useUiStore } from '../store/store';
+import { recordActivity } from '../store/authStore';
 
 export type CustomerRecord = {
   id: string;
@@ -318,6 +319,7 @@ export function ServicesPage() {
     };
 
     setServiceTicket(ticket);
+    recordActivity('Enregistrement d’une prestation', `${ticket.serviceType} • ${ticket.plate} • ${formatPrice(ticket.amount)}`);
 
     // Save to LocalStorage
     try {

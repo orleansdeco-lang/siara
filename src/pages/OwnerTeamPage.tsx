@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { KeyRound, Mail, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
 import { useUiStore } from '../store/store';
+import { useAuthStore } from '../store/authStore';
 
 type WorkerAccess = {
   id: string;
@@ -11,23 +12,16 @@ type WorkerAccess = {
   permissions: string[];
 };
 
-const STORAGE_KEY = 'siara_owner_workers_v1';
 const permissionOptions = ['Clients', 'Services', 'Stock', 'Finance', 'Avis'];
-
-function readWorkers(): WorkerAccess[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as WorkerAccess[]) : [];
-  } catch {
-    return [];
-  }
-}
 
 export function OwnerTeamPage() {
   const { language, theme } = useUiStore();
   const isArabic = language === 'ar';
   const isDark = theme === 'dark';
-  const [workers, setWorkers] = useState(readWorkers);
+  const getWorkers = useAuthStore((state) => state.getWorkers);
+  const addWorker = useAuthStore((state) => state.addWorker);
+  const removeWorker = useAuthStore((state) => state.removeWorker);
+  const [workers, setWorkers] = useState<WorkerAccess[]>(() => getWorkers().map((worker) => ({ ...worker, permissions: worker.permissions || [] })));
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,18 +31,14 @@ export function OwnerTeamPage() {
   const surface = isDark ? 'border-slate-800 bg-slate-900/90' : 'border-slate-200 bg-white shadow-sm';
   const input = isDark ? 'border-slate-700 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-900';
 
-  const persist = (next: WorkerAccess[]) => {
-    setWorkers(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  };
-
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!name.trim() || !email.trim() || password.length < 6) {
       setMessage(isArabic ? 'أدخل المعلومات وكلمة سر من 6 أحرف على الأقل.' : 'Nom, email et mot de passe de 6 caractères minimum requis.');
       return;
     }
-    persist([...workers, { id: `worker-${Date.now()}`, name: name.trim(), email: email.trim(), password, role, permissions }]);
+    addWorker({ name: name.trim(), email: email.trim(), password, role, permissions });
+    setWorkers(getWorkers().map((worker) => ({ ...worker, permissions: worker.permissions || [] })));
     setName('');
     setEmail('');
     setPassword('');
@@ -73,7 +63,7 @@ export function OwnerTeamPage() {
           <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 px-4 py-3 text-sm font-bold text-slate-950"><ShieldCheck size={16} />{isArabic ? 'حفظ العامل' : 'Créer le compte'}</button>
           {message && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">{message}</p>}
         </form>
-        <div className={`rounded-2xl border p-5 ${surface}`}><h2 className={`mb-4 font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{isArabic ? 'العمال المسجلون' : 'Employés enregistrés'}</h2><div className="space-y-3">{workers.length === 0 ? <p className="text-sm text-slate-400">{isArabic ? 'لم تتم إضافة عمال بعد.' : 'Aucun employé pour le moment.'}</p> : workers.map((worker) => <div key={worker.id} className="rounded-xl border border-slate-800 bg-slate-950/60 p-3"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-white">{worker.name}</p><p className="mt-1 text-xs text-slate-400">{worker.email} • {worker.role}</p><div className="mt-2 flex flex-wrap gap-1">{worker.permissions.map((permission) => <span key={permission} className="rounded-md bg-amber-500/15 px-2 py-1 text-[10px] text-amber-300">{permission}</span>)}</div></div><button type="button" onClick={() => persist(workers.filter((item) => item.id !== worker.id))} className="rounded-lg p-2 text-red-300 hover:bg-red-500/10" aria-label="Supprimer"><Trash2 size={16} /></button></div></div>)}</div></div>
+        <div className={`rounded-2xl border p-5 ${surface}`}><h2 className={`mb-4 font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{isArabic ? 'العمال المسجلون' : 'Employés enregistrés'}</h2><div className="space-y-3">{workers.length === 0 ? <p className="text-sm text-slate-400">{isArabic ? 'لم تتم إضافة عمال بعد.' : 'Aucun employé pour le moment.'}</p> : workers.map((worker) => <div key={worker.id} className="rounded-xl border border-slate-800 bg-slate-950/60 p-3"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-white">{worker.name}</p><p className="mt-1 text-xs text-slate-400">{worker.email} • {worker.role}</p><div className="mt-2 flex flex-wrap gap-1">{worker.permissions.map((permission) => <span key={permission} className="rounded-md bg-amber-500/15 px-2 py-1 text-[10px] text-amber-300">{permission}</span>)}</div></div><button type="button" onClick={() => { removeWorker(worker.id); setWorkers(getWorkers().map((item) => ({ ...item, permissions: item.permissions || [] }))); }} className="rounded-lg p-2 text-red-300 hover:bg-red-500/10" aria-label="Supprimer"><Trash2 size={16} /></button></div></div>)}</div></div>
       </div>
     </div>
   );

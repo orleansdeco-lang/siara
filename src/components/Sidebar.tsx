@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   BarChart3,
   Car,
+  Clock3,
   DollarSign,
   Droplets,
   Languages,
@@ -32,6 +33,7 @@ const menuItemsByLang = {
     { label: 'Finance & Caisse', icon: DollarSign, path: '/finance' },
     { label: 'Équipe & العمال', icon: Users2, path: '/team' },
     { label: 'Gestion des accès', icon: Settings, path: '/owner/team' },
+    { label: 'Historique des actions', icon: Clock3, path: '/owner/activity' },
     { label: 'Avis clients (QR)', icon: Star, path: '/reviews' },
   ],
   ar: [
@@ -43,6 +45,7 @@ const menuItemsByLang = {
     { label: 'المالية والصندوق', icon: DollarSign, path: '/finance' },
     { label: 'فريق العمل والعمولات', icon: Users2, path: '/team' },
     { label: 'إدارة العمال والصلاحيات', icon: Settings, path: '/owner/team' },
+    { label: 'سجل النشاطات', icon: Clock3, path: '/owner/activity' },
     { label: 'تقييمات الزبائن (QR)', icon: Star, path: '/reviews' },
   ],
 } as const;
@@ -56,7 +59,18 @@ export function Sidebar() {
   const location = useLocation();
   const isDark = theme === 'dark';
   const isArabic = language === 'ar';
-  const menuItems = menuItemsByLang[language];
+  const menuItems = [...menuItemsByLang[language]].filter((item) => {
+    if (item.path.startsWith('/owner/')) return Boolean(account?.isOwner);
+    const permissionByPath: Record<string, string> = {
+      '/clients': 'Clients',
+      '/services/new': 'Services',
+      '/inventory': 'Stock',
+      '/finance': 'Finance',
+      '/reviews': 'Avis',
+    };
+    const requiredPermission = permissionByPath[item.path];
+    return !requiredPermission || account?.isOwner || account?.permissions?.includes(requiredPermission);
+  });
   const accountName = account?.profile?.ownerName || account?.email || name;
   const accountRole = account?.profile ? 'مالك المحل / Propriétaire' : role;
   const accountInitials = accountName.slice(0, 2).toUpperCase();
