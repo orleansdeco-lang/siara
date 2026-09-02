@@ -55,8 +55,12 @@ function persistAccounts(accounts: Account[]) {
 
 function readWorkers(): WorkerAccount[] {
   try {
-    const raw = localStorage.getItem(WORKERS_KEY);
-    return raw ? (JSON.parse(raw) as WorkerAccount[]) : [];
+    const raw = localStorage.getItem(WORKERS_KEY) || localStorage.getItem('siara_owner_workers_v1');
+    if (!raw) return [];
+    const workers = JSON.parse(raw) as WorkerAccount[];
+    const session = readSession();
+    const ownerAccountId = session?.ownerAccountId || session?.id || readAccounts().find((account) => account.isOwner)?.id;
+    return workers.map((worker) => ({ ...worker, ownerAccountId: worker.ownerAccountId || ownerAccountId }));
   } catch {
     return [];
   }
