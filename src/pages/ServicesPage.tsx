@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle2,
   CircleDollarSign,
+  Download,
   Fuel,
   Printer,
   QrCode,
@@ -129,6 +130,18 @@ const productPricing = {
   cabinFilter: 1800,
 };
 
+const serviceTypes = [
+  { id: 'oil-only', fr: 'Huile seule', ar: 'زيت فقط', price: 0, oil: true, filters: false },
+  { id: 'engine-oil-change', fr: 'Vidange moteur', ar: 'تغيير زيت المحرك', price: 0, oil: true, filters: true },
+  { id: 'gearbox-oil-change', fr: 'Vidange boîte de vitesses', ar: 'تغيير زيت علبة السرعات', price: 6500, oil: false, filters: false },
+  { id: 'power-steering-oil-change', fr: 'Huile direction assistée', ar: 'تغيير زيت التوجيه', price: 3500, oil: false, filters: false },
+  { id: 'brake-pads', fr: 'Plaquettes de frein', ar: 'تغيير بطانات الفرامل', price: 8500, oil: false, filters: false },
+  { id: 'interior-wash', fr: 'Lavage intérieur', ar: 'غسيل داخلي', price: 2500, oil: false, filters: false },
+  { id: 'exterior-wash', fr: 'Lavage extérieur', ar: 'غسيل خارجي', price: 1800, oil: false, filters: false },
+  { id: 'both-washes', fr: 'Lavage intérieur + extérieur', ar: 'غسيل داخلي وخارجي', price: 3800, oil: false, filters: false },
+  { id: 'general-maintenance', fr: 'Entretien général', ar: 'صيانة عامة', price: 6000, oil: false, filters: false },
+] as const;
+
 const SERVICE_STORAGE_KEY = 'siara_service_labels_v1';
 const CLIENTS_STORAGE_KEY = 'siara_customers_list_v1';
 
@@ -141,6 +154,7 @@ export type ServiceTicket = {
   mileage: number;
   date: string;
   serviceType: string;
+  serviceCategory?: string;
   amount: number;
   oilQuantity: number;
   oilType: string;
@@ -174,6 +188,7 @@ export function ServicesPage() {
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleEngine, setVehicleEngine] = useState('');
   const [mileage, setMileage] = useState('');
+  const [serviceCategory, setServiceCategory] = useState('engine-oil-change');
 
   // Oil configuration
   const [isOilEnabled, setIsOilEnabled] = useState(true);
@@ -198,6 +213,14 @@ export function ServicesPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serviceTicket, setServiceTicket] = useState<ServiceTicket | null>(null);
+  const [serviceRecords, setServiceRecords] = useState<ServiceTicket[]>(() => {
+    try {
+      const saved = localStorage.getItem(SERVICE_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [recordCategoryFilter, setRecordCategoryFilter] = useState('all');
+  const [recordDateFilter, setRecordDateFilter] = useState('');
 
   // Search logic
   useEffect(() => {
@@ -230,7 +253,18 @@ export function ServicesPage() {
     (enabledFilters.fuel ? productPricing.fuelFilter : 0) +
     (enabledFilters.cabin ? productPricing.cabinFilter : 0);
 
-  const subtotal = oilTotal + filterTotal + Number(laborCost || 0);
+  const selectedService = serviceTypes.find((type) => type.id === serviceCategory) ?? serviceTypes[1];
+  const subtotal = oilTotal + filterTotal + selectedService.price + Number(laborCost || 0);
+  const filteredServiceRecords = serviceRecords.filter((record) => {
+    const categoryMatch = recordCategoryFilter === 'all' || record.serviceCategory === recordCategoryFilter;
+    const dateMatch = !recordDateFilter || record.date.slice(0, 10) === recordDateFilter;
+    return categoryMatch && dateMatch;
+  });
+
+  useEffect(() => {
+    setIsOilEnabled(selectedService.oil);
+    setEnabledFilters((current) => ({ ...current, oil: selectedService.filters, air: selectedService.filters, fuel: false, cabin: selectedService.filters }));
+  }, [serviceCategory]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatPrice = (val: number) => `DA ${new Intl.NumberFormat('fr-DZ').format(val)}`;
 
@@ -310,7 +344,8 @@ export function ServicesPage() {
       vehicle: vehicleModel.trim() || selectedCustomer?.model || (isArabic ? 'مركبة' : 'Véhicule'),
       mileage: Number(mileage),
       date: new Date().toISOString(),
-      serviceType: isArabic ? 'تغيير زيت وفلاتر' : 'Vidange + filtres',
+      serviceType: isArabic ? selectedService.ar : selectedService.fr,
+      serviceCategory,
       amount: subtotal,
       oilQuantity: isOilEnabled ? oilLiters : 0,
       oilType: isOilEnabled ? selectedOil : '—',
@@ -327,6 +362,7 @@ export function ServicesPage() {
       const existing = raw ? JSON.parse(raw) : [];
       localStorage.setItem(SERVICE_STORAGE_KEY, JSON.stringify([ticket, ...existing]));
     } catch {}
+    setServiceRecords((records) => [ticket, ...records]);
 
     // Save to Supabase
     try {
@@ -337,6 +373,7 @@ export function ServicesPage() {
         plate_number: ticket.plate,
         vehicle_model: ticket.vehicle,
         mileage: ticket.mileage,
+        service_type: ticket.serviceType,
         oil_type: ticket.oilType,
         filters_used: filtersList.join(', '),
         labor_cost: Number(laborCost || 0),
@@ -380,6 +417,7 @@ export function ServicesPage() {
     confirm: isArabic ? 'تأكيد وحفظ الخدمة' : 'Valider le service',
     print: isArabic ? 'طباعة الوصل' : 'Imprimer bon',
     openFeedback: isArabic ? 'فتح صفحة التقييم' : 'Ouvrir avis client',
+    category: isArabic ? 'نوع الخدمة' : 'Type de service',
   };
 
   const cardSurface = isDark ? 'border-slate-800 bg-slate-900/90' : 'border-slate-200 bg-white shadow-sm';
@@ -416,6 +454,17 @@ export function ServicesPage() {
                 <UserPlus size={14} />
                 {t.newCustomer}
               </button>
+            </div>
+
+            <div className="mt-4">
+              <label className="mb-1 block text-[11px] font-semibold text-slate-400">{t.category}</label>
+              <select
+                value={serviceCategory}
+                onChange={(e) => setServiceCategory(e.target.value)}
+                className={`w-full rounded-xl border px-3 py-2.5 text-sm font-semibold focus:outline-none ${inputClass}`}
+              >
+                {serviceTypes.map((type) => <option key={type.id} value={type.id}>{isArabic ? type.ar : type.fr}</option>)}
+              </select>
             </div>
 
             <div className="relative">
@@ -522,7 +571,7 @@ export function ServicesPage() {
           </div>
 
           {/* Oil & Viscosity Card */}
-          <div className={`rounded-2xl border p-4 sm:p-5 ${cardSurface}`}>
+          {selectedService.oil && <div className={`rounded-2xl border p-4 sm:p-5 ${cardSurface}`}>
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2 text-amber-500">
                 <Fuel size={18} />
@@ -574,10 +623,10 @@ export function ServicesPage() {
                 </div>
               </div>
             )}
-          </div>
+          </div>}
 
           {/* Filters Card */}
-          <div className={`rounded-2xl border p-4 sm:p-5 ${cardSurface}`}>
+          {selectedService.filters && <div className={`rounded-2xl border p-4 sm:p-5 ${cardSurface}`}>
             <div className="mb-3 flex items-center gap-2 text-amber-500">
               <Wrench size={18} />
               <span className="text-xs font-bold uppercase tracking-wider">3. {t.filters}</span>
@@ -635,7 +684,7 @@ export function ServicesPage() {
                 );
               })}
             </div>
-          </div>
+          </div>}
         </div>
 
         {/* Right Column: Invoice Summary & Receipt Ticket */}
@@ -648,10 +697,14 @@ export function ServicesPage() {
 
             <div className={`space-y-3 rounded-xl border p-3.5 text-sm ${subCard}`}>
               <div className="flex justify-between text-slate-400">
+                <span>{isArabic ? 'الخدمة' : 'Prestation'}</span>
+                <span>{formatPrice(selectedService.price)}</span>
+              </div>
+              {selectedService.oil && <div className="flex justify-between text-slate-400">
                 <span>{isArabic ? 'الزيت' : 'Huile moteur'}</span>
                 <span className="font-semibold text-slate-200">{formatPrice(oilTotal)}</span>
-              </div>
-              <div className="flex justify-between text-slate-400">
+              </div>}
+              {selectedService.filters && <><div className="flex justify-between text-slate-400">
                 <span>{isArabic ? 'فلتر الزيت' : 'Filtre huile'}</span>
                 <span>{formatPrice(enabledFilters.oil ? productPricing.oilFilter : 0)}</span>
               </div>
@@ -666,7 +719,7 @@ export function ServicesPage() {
               <div className="flex justify-between text-slate-400">
                 <span>{isArabic ? 'فلتر المقصورة' : 'Filtre habitacle'}</span>
                 <span>{formatPrice(enabledFilters.cabin ? productPricing.cabinFilter : 0)}</span>
-              </div>
+              </div></>}
 
               {/* Labor input */}
               <div className="border-t border-slate-800 pt-2">
@@ -725,6 +778,7 @@ export function ServicesPage() {
                     <div className="flex justify-between"><span className="text-slate-500">{isArabic ? 'الهاتف:' : 'Tél:'}</span> <span>{serviceTicket.phone}</span></div>
                     <div className="flex justify-between"><span className="text-slate-500">{isArabic ? 'اللوحة:' : 'Plaque:'}</span> <span className="text-amber-400">{serviceTicket.plate}</span></div>
                     <div className="flex justify-between"><span className="text-slate-500">{isArabic ? 'المركبة:' : 'Véhicule:'}</span> <span>{serviceTicket.vehicle}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">{isArabic ? 'الخدمة:' : 'Prestation:'}</span> <span>{serviceTicket.serviceType}</span></div>
                     <div className="flex justify-between"><span className="text-slate-500">{isArabic ? 'الكيلومتر:' : 'Km:'}</span> <span>{serviceTicket.mileage} km</span></div>
                     <div className="flex justify-between"><span className="text-slate-500">{isArabic ? 'التاريخ:' : 'Date:'}</span> <span>{new Date(serviceTicket.date).toLocaleDateString('fr-DZ')}</span></div>
                     <div className="flex justify-between border-t border-slate-800 pt-1.5 text-sm font-bold text-amber-400">
@@ -750,6 +804,14 @@ export function ServicesPage() {
                     <Printer size={14} />
                     {t.print}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-600 bg-slate-800 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700"
+                  >
+                    <Printer size={14} />
+                    {isArabic ? 'طباعة الفاتورة' : 'Imprimer facture'}
+                  </button>
                   <a
                     href={`/feedback/${serviceTicket.id}`}
                     target="_blank"
@@ -762,6 +824,32 @@ export function ServicesPage() {
                 </div>
               </div>
             )}
+            <div className={`no-print mt-5 rounded-xl border p-3 ${subCard}`}>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h4 className="text-sm font-bold">{isArabic ? 'سجل الخدمات' : 'Historique des services'}</h4>
+                <button type="button" onClick={() => {
+                  const csv = ['Date;Client;Véhicule;Catégorie;Montant', ...filteredServiceRecords.map((r) => `${r.date.slice(0, 10)};${r.customerName};${r.vehicle};${r.serviceType};${r.amount}`)].join('\n');
+                  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+                  const link = document.createElement('a'); link.href = url; link.download = 'services.csv'; link.click(); URL.revokeObjectURL(url);
+                }} className="inline-flex items-center gap-1 rounded-lg border border-amber-500/40 px-2 py-1 text-xs font-semibold text-amber-400">
+                  <Download size={13} /> CSV
+                </button>
+              </div>
+              <div className="mb-3 grid gap-2 sm:grid-cols-2">
+                <select value={recordCategoryFilter} onChange={(e) => setRecordCategoryFilter(e.target.value)} className={`rounded-lg border px-2 py-1.5 text-xs ${inputClass}`}>
+                  <option value="all">{isArabic ? 'كل الفئات' : 'Toutes les catégories'}</option>
+                  {serviceTypes.map((type) => <option key={type.id} value={type.id}>{isArabic ? type.ar : type.fr}</option>)}
+                </select>
+                <input type="date" value={recordDateFilter} onChange={(e) => setRecordDateFilter(e.target.value)} className={`rounded-lg border px-2 py-1.5 text-xs ${inputClass}`} />
+              </div>
+              <div className="max-h-48 space-y-1.5 overflow-y-auto">
+                {filteredServiceRecords.length === 0 && <p className="text-xs text-slate-500">{isArabic ? 'لا توجد خدمات.' : 'Aucun service.'}</p>}
+                {filteredServiceRecords.map((record) => <div key={record.id} className="flex items-center justify-between text-xs">
+                  <span className="truncate pr-2">{record.date.slice(0, 10)} • {record.serviceType} • {record.customerName}</span>
+                  <strong className="text-amber-400">{formatPrice(record.amount)}</strong>
+                </div>)}
+              </div>
+            </div>
           </div>
         </div>
       </div>

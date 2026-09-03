@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Barcode, Boxes, PackagePlus, Search, ShieldAlert, TrendingUp, Wallet } from 'lucide-react';
+import { Barcode, Boxes, PackagePlus, Printer, Search, ShieldAlert, TrendingUp, Wallet } from 'lucide-react';
 import { fetchSupabaseTable, insertSupabaseRow, updateSupabaseRow } from '../lib/supabase';
 import { useUiStore } from '../store/store';
 
@@ -608,6 +608,21 @@ export function InventoryPage() {
                 >
                   + 5 {isArabic ? 'قطع توريد سريع' : 'unités'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="no-print inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20"
+                >
+                  <Printer size={14} /> {isArabic ? 'طباعة طلب شراء' : 'Imprimer bon de commande'}
+                </button>
+                <div className="print-ticket print-only rounded-xl border border-slate-300 bg-white p-6 text-slate-900">
+                  <h1 className="text-xl font-black">{isArabic ? 'طلب شراء' : 'Bon de commande fournisseur'}</h1>
+                  <p className="mt-3">{selectedProduct.supplier}</p>
+                  <p>{selectedProduct.name} ({selectedProduct.partNumber})</p>
+                  <p className="mt-2">{isArabic ? 'الكمية المطلوبة:' : 'Quantité demandée :'} {Math.max(5, selectedProduct.minQty - selectedProduct.quantity + 5)}</p>
+                  <p>{isArabic ? 'سعر الوحدة:' : 'Prix unitaire :'} {formatPrice(selectedProduct.purchasePrice)}</p>
+                  <p>{isArabic ? 'التاريخ:' : 'Date :'} {new Date().toLocaleDateString('fr-DZ')}</p>
+                </div>
               </div>
             ) : null}
           </div>

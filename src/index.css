@@ -33,6 +33,10 @@ body.light {
   min-height: 100vh;
 }
 
+.print-only {
+  display: none;
+}
+
 /* Base print stylesheet for receipts */
 @media print {
   body * {
@@ -51,6 +55,9 @@ body.light {
     padding: 20px;
     background: white !important;
     color: black !important;
+  }
+  .print-only {
+    display: block;
   }
   .no-print {
     display: none !important;
