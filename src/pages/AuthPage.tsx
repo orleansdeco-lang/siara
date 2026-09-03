@@ -77,7 +77,7 @@ export function AuthPage() {
           </form>
           {mode === 'register' && <div className="mt-5 border-t border-slate-800 pt-5"><p className="mb-2 text-xs font-semibold text-slate-300">{isArabic ? 'OTP WhatsApp (جاهز للربط)' : 'OTP WhatsApp (prêt à connecter)'}</p><div className="flex gap-2"><div className="relative min-w-0 flex-1"><Phone className="absolute left-3 top-3 h-4 w-4 text-slate-500" /><input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+213..." className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-amber-500" /></div><button type="button" onClick={sendOtp} className="rounded-xl border border-amber-500/50 px-3 text-xs font-bold text-amber-300">{isArabic ? 'إرسال' : 'Envoyer'}</button></div>{otpSent && <input value={otp} onChange={(event) => setOtp(event.target.value)} placeholder="OTP" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm outline-none focus:border-amber-500" />}</div>}
           {error && <p className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">{error}</p>}
-          <Link to="/app/auth" className="mt-5 block text-center text-xs text-amber-400 hover:text-amber-300">{isArabic ? 'أنا صاحب سيارة — دخول Personal App' : 'Je suis propriétaire — ouvrir Personal App'}</Link>
+          <Link to="/" className="mt-5 block text-center text-xs text-slate-500 hover:text-amber-300">{isArabic ? 'الدخول التجريبي متاح بعد إنشاء حساب محلي' : 'Le mode local fonctionne sans configuration Supabase'}</Link>
         </div>
       </div>
     </div>

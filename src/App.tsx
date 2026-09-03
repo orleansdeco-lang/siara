@@ -19,8 +19,6 @@ import { TeamPage } from './pages/TeamPage';
 import { VehicleModelDetailPage } from './pages/VehicleModelDetailPage';
 import { VehiclesPage } from './pages/VehiclesPage';
 import { SetupPage } from './pages/SetupPage';
-import { CustomerAuthPage } from './pages/CustomerAuthPage';
-import { CustomerDashboardPage, CustomerGaragePage, CustomerHistoryPage, CustomerProfilePage, CustomerVehiclePage } from './pages/PersonalAppPage';
 
 function PermissionGate({ permission, children }: { permission: string; children: ReactNode }) {
   const account = useAuthStore((state) => state.account);
@@ -38,22 +36,12 @@ function App() {
     document.documentElement.style.colorScheme = theme;
     document.body.classList.toggle('light', theme === 'light');
     document.body.classList.toggle('dark', theme === 'dark');
-    document.body.classList.toggle('midnight', theme === 'midnight');
   }, [theme, language]);
 
   return (
     <BrowserRouter>
-      <div className={`app-shell ${theme}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-        {account?.role === 'CUSTOMER' ? (
-          <Routes>
-            <Route path="/app" element={<CustomerDashboardPage />} />
-            <Route path="/app/garage" element={<CustomerGaragePage />} />
-            <Route path="/app/garage/:id" element={<CustomerVehiclePage />} />
-            <Route path="/app/history" element={<CustomerHistoryPage />} />
-            <Route path="/app/profile" element={<CustomerProfilePage />} />
-            <Route path="*" element={<CustomerDashboardPage />} />
-          </Routes>
-        ) : account ? (
+      <div className={`app-shell ${theme === 'light' ? 'light' : 'dark'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+        {account ? (
           <>
             <Sidebar />
             <Layout>
@@ -80,7 +68,6 @@ function App() {
           <Routes>
             <Route path="/feedback/:serviceId" element={<CustomerFeedbackPage />} />
             <Route path="/setup" element={<SetupPage />} />
-            <Route path="/app/auth" element={<CustomerAuthPage />} />
             <Route path="*" element={<AuthPage />} />
           </Routes>
         )}

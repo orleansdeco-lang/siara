@@ -14,16 +14,13 @@ export type Account = {
   id: string;
   email: string;
   password: string;
-  role?: string;
-  phone?: string;
-  clientId?: number;
   profile?: GarageProfile;
   isOwner?: boolean;
   ownerAccountId?: string;
   permissions?: string[];
 };
 
-export type WorkerAccount = Omit<Account, 'role'> & {
+export type WorkerAccount = Account & {
   name: string;
   role: string;
 };
@@ -32,7 +29,6 @@ type AuthState = {
   account: Account | null;
   signIn: (email: string, password: string) => boolean;
   register: (email: string, password: string) => Account;
-  registerCustomer: (email: string, password: string, name: string, phone: string) => Account;
   addWorker: (worker: Omit<WorkerAccount, 'id' | 'ownerAccountId' | 'isOwner'>) => WorkerAccount;
   getWorkers: () => WorkerAccount[];
   removeWorker: (id: string) => void;
@@ -107,35 +103,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   register: (email, password) => {
     const accounts = readAccounts();
-    const account: Account = { id: `account-${Date.now()}`, email, password, role: 'OWNER', isOwner: true, permissions: ['*'] };
+    const account: Account = { id: `account-${Date.now()}`, email, password, isOwner: true, permissions: ['*'] };
     persistAccounts([...accounts, account]);
     localStorage.setItem(SESSION_KEY, JSON.stringify(account));
     recordActivity('Création du compte', 'Création du compte propriétaire', account);
-    set({ account });
-    return account;
-  },
-  registerCustomer: (email, password, name, phone) => {
-    const accounts = readAccounts();
-    const existingClient = (() => {
-      try {
-        const raw = localStorage.getItem('siara_clients_store_v2');
-        const clients = raw ? JSON.parse(raw) as Array<{ id: number; full_name: string; phone: string }> : [];
-        return clients.find((client) => client.phone === phone || client.full_name.toLowerCase() === name.toLowerCase());
-      } catch {
-        return undefined;
-      }
-    })();
-    const account: Account = {
-      id: `customer-${Date.now()}`,
-      email,
-      password,
-      role: 'CUSTOMER',
-      phone,
-      clientId: existingClient?.id,
-    };
-    persistAccounts([...accounts, account]);
-    localStorage.setItem(SESSION_KEY, JSON.stringify(account));
-    recordActivity('Création du compte client', `Création du compte pour ${email}`, account);
     set({ account });
     return account;
   },
