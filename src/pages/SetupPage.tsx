@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ImagePlus, MapPin, Phone, Save, UserRound } from 'lucide-react';
 import { useAuthStore, GarageProfile } from '../store/authStore';
 import { useGarageStore } from '../store/store';
@@ -15,7 +15,7 @@ export function SetupPage() {
   const [saved, setSaved] = useState(false);
 
   if (!account) {
-    return <Navigate to="/auth" replace />;
+    return <a href="/auth" className="block p-8 text-center text-amber-400">Connexion requise</a>;
   }
 
   const update = (key: keyof GarageProfile, value: string) => setProfile((current) => ({ ...current, [key]: value }));

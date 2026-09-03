@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CalendarClock, Phone, Plus, Search, UserPlus } from 'lucide-react';
 import { fetchSupabaseTable, insertSupabaseRow } from '../lib/supabase';
 import { useUiStore } from '../store/store';
+import { saveWorkshopService } from '../lib/personalData';
 
 export type ServiceRecord = {
   id: string;
@@ -245,6 +246,17 @@ export function ClientsPage() {
       status: paid >= amount ? 'payé' : paid > 0 ? 'partiel' : 'dette',
       notes: serviceForm.notes || 'Vidange enregistrée',
     };
+    saveWorkshopService({
+      id: record.id,
+      clientId: selectedClient.id,
+      plate: selectedClient.plate_number,
+      vehicle: record.vehicle,
+      date: record.date,
+      service: record.serviceType,
+      mileage: 0,
+      price: record.amount,
+      filters: '',
+    });
 
     setClients((prev) =>
       prev.map((c) =>
@@ -265,6 +277,7 @@ export function ClientsPage() {
     try {
       await insertSupabaseRow('services', {
         garage_id: 1,
+        client_id: selectedClient.id,
         customer_name: selectedClient.full_name,
         customer_phone: selectedClient.phone,
         plate_number: selectedClient.plate_number,

@@ -12,6 +12,7 @@ import {
 import { insertSupabaseRow } from '../lib/supabase';
 import { useGarageStore, useUiStore } from '../store/store';
 import { recordActivity } from '../store/authStore';
+import { saveWorkshopService } from '../lib/personalData';
 
 export type CustomerRecord = {
   id: string;
@@ -327,6 +328,18 @@ export function ServicesPage() {
       const existing = raw ? JSON.parse(raw) : [];
       localStorage.setItem(SERVICE_STORAGE_KEY, JSON.stringify([ticket, ...existing]));
     } catch {}
+    saveWorkshopService({
+      id: ticket.id,
+      plate: ticket.plate.toUpperCase(),
+      vehicle: ticket.vehicle,
+      date: ticket.date.slice(0, 10),
+      service: ticket.serviceType,
+      oil: ticket.oilType,
+      filters: filtersList.join(', '),
+      mileage: ticket.mileage,
+      price: ticket.amount,
+      garage: garageName,
+    });
 
     // Save to Supabase
     try {

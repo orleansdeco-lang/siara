@@ -340,6 +340,11 @@ create table if not exists public.garage_members (
   primary key (user_id, garage_id)
 );
 
+-- A customer identity is attached to the existing client row; no separate
+-- personal-app database is required.
+alter table public.clients add column if not exists auth_user_id uuid references auth.users(id) on delete set null;
+create index if not exists clients_auth_user_id_idx on public.clients(auth_user_id);
+
 alter table public.garages add column if not exists owner_id uuid references auth.users(id) on delete set null;
 alter table public.garages add column if not exists wilaya text;
 alter table public.garages add column if not exists storefront_image_url text;
@@ -383,6 +388,26 @@ begin
     );
   end loop;
 end $$;
+
+drop policy if exists "Customers can view their own client record" on public.clients;
+create policy "Customers can view their own client record" on public.clients
+  for select to authenticated using (auth_user_id = auth.uid());
+
+drop policy if exists "Customers can view their own vehicles" on public.vehicles;
+create policy "Customers can view their own vehicles" on public.vehicles
+  for select to authenticated using (
+    client_id in (select id from public.clients where auth_user_id = auth.uid())
+  );
+
+drop policy if exists "Customers can view their own services" on public.services;
+create policy "Customers can view their own services" on public.services
+  for select to authenticated using (
+    client_id in (select id from public.clients where auth_user_id = auth.uid())
+    or vehicle_id in (
+      select id from public.vehicles
+      where client_id in (select id from public.clients where auth_user_id = auth.uid())
+    )
+  );
 
 drop policy if exists "Account members can access service items" on public.service_items;
 create policy "Account members can access service items" on public.service_items
