@@ -13,7 +13,7 @@ interface UserState {
   setUser: (name: string, role: string, avatar: string) => void;
 }
 
-export type ThemeMode = 'dark' | 'light';
+export type ThemeMode = 'dark' | 'light' | 'midnight';
 export type LocaleMode = 'fr' | 'ar';
 
 interface GarageState {
@@ -40,7 +40,7 @@ const GARAGE_KEY = 'siara_garage_info';
 const getInitialTheme = (): ThemeMode => {
   try {
     const saved = localStorage.getItem(THEME_KEY);
-    if (saved === 'light' || saved === 'dark') return saved;
+    if (saved === 'light' || saved === 'dark' || saved === 'midnight') return saved;
   } catch {}
   return 'dark';
 };
@@ -98,7 +98,7 @@ export const useUiStore = create<UiState>((set) => ({
   language: getInitialLanguage(),
   toggleTheme: () => {
     set((state) => {
-      const next: ThemeMode = state.theme === 'dark' ? 'light' : 'dark';
+      const next: ThemeMode = state.theme === 'dark' ? 'light' : state.theme === 'light' ? 'midnight' : 'dark';
       try {
         localStorage.setItem(THEME_KEY, next);
       } catch {}

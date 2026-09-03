@@ -29,6 +29,11 @@ body.light {
   color: #0f172a;
 }
 
+body.midnight {
+  background: #09051a;
+  color: #f8f7ff;
+}
+
 .app-shell {
   min-height: 100vh;
 }
